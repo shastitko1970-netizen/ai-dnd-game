@@ -1,0 +1,23 @@
+{
+  "name": "ai-dnd-game-backend",
+  "version": "1.0.0",
+  "description": "Fastify backend for AI D&D game",
+  "main": "dist/main.js",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "build": "tsc",
+    "start": "node dist/main.js",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "fastify": "^4.25.1",
+    "@fastify/cors": "^8.4.2",
+    "openai": "^4.28.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "typescript": "^5.3.3",
+    "tsx": "^4.7.0"
+  }
+}
