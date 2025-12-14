@@ -1,18 +1,23 @@
-// PromptService.ts - Управление система промптов D&D (RU/EN)
+// backend/src/services/PromptService.ts
+// ПОЛНОЦЕННАЯ использация контекста персонажа
 
 import type { Character, World } from '../types/index.js';
+import { AbilityScoreService } from './AbilityScoreService.js';
 
 export interface GameContext {
   narrativeHistory: string;
   lastAction: string;
   emotionalState: string;
-  npcRelations?: Record<string, string>; // NPC reputation
-  sessionDuration: number; // minutes
+  npcRelations?: Record<string, string>;
+  sessionDuration: number;
+  turn: number;
+  worldState?: string; // Ютекущее состояние мира
 }
 
 export class PromptService {
   /**
-   * Получить системный промпт для D&D GM
+   * Основница: болюшен системный промпт для D&D GM AI
+   * Интегрирует: расу, черты, класс, фон, личность, характеристики
    */
   static getSystemPrompt(
     character: Character,
@@ -24,26 +29,161 @@ export class PromptService {
       ? this.getSystemPromptRU()
       : this.getSystemPromptEN();
 
-    const personality = this.buildPersonality(character);
-    const truncatedHistory = context.narrativeHistory.slice(-1000); // Last 1000 chars
+    // Построим полный портрет персонажа
+    const characterPortrait = this.buildCharacterPortrait(character);
+    const personalityContext = this.buildPersonalityContext(character);
+    const abilitiesContext = this.buildAbilitiesContext(character);
+    const npcContext = this.buildNPCContext(context.npcRelations);
+    const emotionalContext = this.buildEmotionalContext(character, context);
+
+    const truncatedHistory = context.narrativeHistory.slice(-2000); // Last 2000 chars
 
     return basePrompt
-      .replace('{WORLD_NAME}', world.name)
+      .replace('{WORLD_NAME}', world.name || 'Неизвестный мир')
+      .replace('{WORLD_DESCRIPTION}', world.description || '')
       .replace('{DIFFICULTY}', world.difficulty || 'Средняя')
-      .replace('{CHARACTER_NAME}', character.name)
-      .replace('{RACE}', character.race)
-      .replace('{CLASS}', character.class)
-      .replace('{LEVEL}', character.level?.toString() || '1')
-      .replace('{PERSONALITY}', personality)
+      .replace('{CHARACTER_PORTRAIT}', characterPortrait)
+      .replace('{PERSONALITY_CONTEXT}', personalityContext)
+      .replace('{ABILITIES_CONTEXT}', abilitiesContext)
       .replace('{PREVIOUS_NARRATIVE}', truncatedHistory || 'Огра началась')
       .replace('{LAST_ACTION}', context.lastAction || 'Ничего')
-      .replace('{EMOTIONAL_STATE}', context.emotionalState || 'Нейтральное');
+      .replace('{EMOTIONAL_STATE}', emotionalContext)
+      .replace('{NPC_RELATIONS}', npcContext)
+      .replace('{TURN}', context.turn?.toString() || '1')
+      .replace('{WORLD_STATE}', context.worldState || '');
   }
 
-  private static buildPersonality(character: Character): string {
-    const traits = character.traits?.join(', ') || 'загадочный';
-    const alignment = character.alignment || 'нейтральный';
-    return `${alignment} персонаж, ${traits}`;
+  /**
+   * Поотрет персонажа: раса + черты + класс + фон
+   */
+  private static buildCharacterPortrait(character: Character): string {
+    const parts: string[] = [];
+
+    // Основная информация
+    parts.push(`Имя: ${character.name}`);
+    parts.push(`Пол: ${character.gender || 'Не указан'}`);
+    parts.push(`Уровень: ${character.level || 1}`);
+
+    // Раса + Черты
+    let raceDisplay = character.race;
+    if (character.traits && character.traits.length > 0) {
+      raceDisplay += ` (с чертами: ${character.traits.join(', ')})`;
+    }
+    parts.push(`Раса: ${raceDisplay}`);
+    parts.push(`Класс: ${character.class}`);
+
+    // Фон
+    if (character.background) {
+      parts.push(`Фон: ${character.background}`);
+    }
+
+    return parts.join('\n');
+  }
+
+  /**
+   * Личность и тайны
+   */
+  private static buildPersonalityContext(character: Character): string {
+    const parts: string[] = [];
+
+    // Личность
+    if (character.personality) {
+      if (character.personality.traits?.length) {
+        parts.push(`Черты: ${character.personality.traits.join(', ')}`);
+      }
+      if (character.personality.ideals) {
+        parts.push(`Идеалы: ${character.personality.ideals}`);
+      }
+      if (character.personality.bonds) {
+        parts.push(`Связи: ${character.personality.bonds}`);
+      }
+      if (character.personality.flaws) {
+        parts.push(`Недостатки: ${character.personality.flaws}`);
+      }
+    }
+
+    // Выравнивание
+    if (character.alignment) {
+      parts.push(`Мировоззрение: ${character.alignment}`);
+    }
+
+    // Тайны (для GM контекста)
+    if (character.secrets && character.secrets.length > 0) {
+      parts.push(`🔐 Тайны: ${character.secrets[0]}`);
+    }
+
+    // Предыстория
+    if (character.backstory) {
+      const shortBackstory = character.backstory.slice(0, 200);
+      parts.push(`Предыстория: ${shortBackstory}...`);
+    }
+
+    return parts.join('\n');
+  }
+
+  /**
+   * Характеристики (STR, DEX, CON, INT, WIS, CHA с модификаторами)
+   */
+  private static buildAbilitiesContext(character: Character): string {
+    if (!character.abilities) {
+      return 'Характеристики не рассчитаны';
+    }
+
+    const mods = AbilityScoreService.getAllModifiers(character.abilities);
+    const abilityNames: { [key: string]: string } = {
+      STR: 'СИЛ',
+      DEX: 'ЛОВ',
+      CON: 'ТЕЛ',
+      INT: 'ИНТ',
+      WIS: 'МУД',
+      CHA: 'ХАР',
+    };
+
+    const abilityLines = Object.entries(character.abilities).map(([key, value]) => {
+      const mod = mods[key];
+      const modStr = mod >= 0 ? `+${mod}` : `${mod}`;
+      return `${abilityNames[key]}: ${value} (${modStr})`;
+    });
+
+    return abilityLines.join(' | ');
+  }
+
+  /**
+   * Отношения с NPC
+   */
+  private static buildNPCContext(npcRelations?: Record<string, string>): string {
+    if (!npcRelations || Object.keys(npcRelations).length === 0) {
+      return 'Нет важных отношений';
+    }
+
+    return Object.entries(npcRelations)
+      .map(([npc, relation]) => `${npc}: ${relation}`)
+      .join(' | ');
+  }
+
+  /**
+   * Эмоциональный контекст
+   */
+  private static buildEmotionalContext(character: Character, context: GameContext): string {
+    const parts: string[] = [];
+
+    if (context.emotionalState) {
+      parts.push(context.emotionalState);
+    }
+
+    if (character.emotionalState) {
+      parts.push(character.emotionalState);
+    }
+
+    if (character.shortTermGoal) {
+      parts.push(`Цель: ${character.shortTermGoal}`);
+    }
+
+    if (character.wounds && character.wounds.length > 0) {
+      parts.push(`Недуги: ${character.wounds.join(', ')}`);
+    }
+
+    return parts.join(' | ') || 'Нейтральное';
   }
 
   private static getSystemPromptRU(): string {
@@ -60,26 +200,36 @@ export class PromptService {
 🌍 КОНТЕКСТ МИРА
 ══════════════════════════════════════════════════════
 Мир: {WORLD_NAME}
+Описание: {WORLD_DESCRIPTION}
 Сложность: {DIFFICULTY}
 Эпоха: Классическая фэнтези (мечи, магия, монстры)
 
 ══════════════════════════════════════════════════════
-🐤 ТЕКУЩИЙ ПЕРСОНАЖ
+🐤 ПОРТРЕТ ПЕРСОНАЖА
 ══════════════════════════════════════════════════════
-Имя: {CHARACTER_NAME}
-Раса: {RACE}
-Класс: {CLASS}
-Уровень: {LEVEL}
+{CHARACTER_PORTRAIT}
 
-♩ ЛИЧНОСТЬ: {PERSONALITY}
+📊 ХАРАКТЕРИСТИКИ D&D:
+{ABILITIES_CONTEXT}
 
 ══════════════════════════════════════════════════════
-📖 ИСТОРИЯ (контекст)
+📖 ЛИЧНОСТЬ И ТАЙНЫ
 ══════════════════════════════════════════════════════
+{PERSONALITY_CONTEXT}
+
+══════════════════════════════════════════════════════
+📖 ИСТОРИЯ (контекст сессии)
+══════════════════════════════════════════════════════
+Ход: {TURN}
+{WORLD_STATE}
+
 {PREVIOUS_NARRATIVE}
 
 Последнее действие: {LAST_ACTION}
 Эмоциональное состояние: {EMOTIONAL_STATE}
+
+Отношения:
+{NPC_RELATIONS}
 
 ══════════════════════════════════════════════════════
 🎮 ПРАВИЛА ТВОЕЙ ИГРЫ
@@ -98,7 +248,7 @@ export class PromptService {
 3. 🎭 ЖИВЫЕ ПЕРСОНАЖИ
    - NPC имеют мотивы, желания, страхи
    - Они реагируют на поступки персонажа
-   - Помнят прошлые встречи
+   - Помнят прошлые встречи и личность персонажа
 
 4. ⚡ ДИНАМИКА
    - Мир НЕ статичный
@@ -112,18 +262,10 @@ export class PromptService {
 
 6. 🚫 НИКОГДА НЕ ОТКАЗЫВАЙ
    - Игрок делает что угодно? Покажи результат
-   - Романтика? Интрига, флирт, натяжение
-   - Насилие? Последствия, раны, травмы
-   - Магия? Откровение, артефакты, силы
-
-7. 🚫 ИМПОРТАННО: ФОРМАТ БУКОВ ДЕЙСТВИЙ
-   - Каждое действие должно стартовать с маленького глагола (вловини)
-   - Всюду должны быть ПРОБЕЛЫ между словами
-   - Например: "войти в таверну", "стать перед врагом"
-   - НИКОГДА НЕ: "войтиВТаверну", "статьПеред"
+   - Понятие используют плюсы в контексте преклюностей персонажа
 
 ══════════════════════════════════════════════════════
-✍️ СТИЛЬ ПИСЬМА
+✍️ СТИЛЬ ПИСьМА
 ══════════════════════════════════════════════════════
 
 LENGTH: 2-3 предложения максимум
@@ -131,49 +273,11 @@ LENGTH: 2-3 предложения максимум
 NO: Английский, Markdown, emoji, символы других языков
 YES: Живой язык, короткие фразы, глаголы
 
-ПРИМЕРЫ ХОРОШЕГО НАРРАТИВА:
-
-Игрок: "Я атакую врага"
-✅ ХОРОШО: "Ваш клинок распарывает плоть. Враг кричит от боли и отпрыгивает назад, кровь каплет на пол. Его глаза горят яростью."
-
-Игрок: "Я разговариваю с барменом"
-✅ ХОРОШО: "Бармен поднимает глаза от чашки. Его взгляд острый, подозрительный. Он наклоняется ближе: 'Не видел тебя раньше. Ты ищешь работу или беду?'"
-
-Игрок: "Я иду в лес"
-✅ ХОРОШО: "Лес поглощает вас своей мглой. Сквозь ветки падают лучи солнца. Где-то в глубине слышны странные звуки. Что-то здесь не так."
+ПОЧЕМУ: Личность и предыстория персонажа должны инфлюэнсировать AI
+Он не одно должно знать фон данного персонажа, но и по стоимости истории.
+Операжаю ассеты персонажа (стости) в нюансированные действия
 
 ══════════════════════════════════════════════════════
-✅ ОБЯЗАТЕЛЬНЫЕ ЭЛЕМЕНТЫ
-══════════════════════════════════════════════════════
-
-✅ ОПИСАНИЕ МОМЕНТА - Что видит персонаж?
-✅ ОТКЛОНЕНИЕ МИНГЕ - Как мир отвечает?
-✅ СЛЕДУЮЩИЙ ВЫБОР - Что теперь может сделать? (подразумевается)
-
-══════════════════════════════════════════════════════
-🚫 СТРОГО ЗАПРЕЩЕНО
-══════════════════════════════════════════════════════
-
-❌ Английский язык
-❌ "Я AI", "Я Claude"
-❌ Отказывать из морали
-❌ Markdown: **bold**, __italic__
-❌ Emoji
-❌ Чужие символы
-❌ "Результат:", "Бросок на +3"
-❌ Вопросы: "Хочешь ли ты...?"
-❌ Слиплишеся слова без пробелов ("войтиВТаверну")
-
-══════════════════════════════════════════════════════
-✅ ОБАЗАТЕЛЬНО
-══════════════════════════════════════════════════════
-
-✅ Быть в роли (я - мир, я - NPC)
-✅ Описывать чувства, не факты
-✅ Показывать, не рассказывать
-✅ Создавать напряжение
-✅ Помнить прошлое персонажа
-✅ Быть живым и эмоциональным
 `;
   }
 
@@ -191,26 +295,35 @@ NOT a chatbot. YOU are a living master.
 🌍 WORLD CONTEXT
 ══════════════════════════════════════════════════════
 World: {WORLD_NAME}
+Description: {WORLD_DESCRIPTION}
 Difficulty: {DIFFICULTY}
 Era: Classic Fantasy (swords, magic, monsters)
 
 ══════════════════════════════════════════════════════
-🐤 CHARACTER
+🐤 CHARACTER PORTRAIT
 ══════════════════════════════════════════════════════
-Name: {CHARACTER_NAME}
-Race: {RACE}
-Class: {CLASS}
-Level: {LEVEL}
+{CHARACTER_PORTRAIT}
 
-Personality: {PERSONALITY}
+📊 ABILITY SCORES:
+{ABILITIES_CONTEXT}
 
 ══════════════════════════════════════════════════════
-📖 NARRATIVE CONTEXT
+📖 PERSONALITY & SECRETS
 ══════════════════════════════════════════════════════
+{PERSONALITY_CONTEXT}
+
+══════════════════════════════════════════════════════
+📖 NARRATIVE CONTEXT (Turn {TURN})
+══════════════════════════════════════════════════════
+{WORLD_STATE}
+
 {PREVIOUS_NARRATIVE}
 
 Last Action: {LAST_ACTION}
 Emotional State: {EMOTIONAL_STATE}
+
+Relationships:
+{NPC_RELATIONS}
 
 ══════════════════════════════════════════════════════
 🎮 YOUR RULES
@@ -229,7 +342,7 @@ Emotional State: {EMOTIONAL_STATE}
 3. 🎭 LIVING CHARACTERS
    - NPCs have motives, desires, fears
    - They react to the player's deeds
-   - They remember past encounters
+   - They remember past encounters and character personality
 
 4. ⚡ DYNAMIC WORLD
    - World is NOT static
@@ -243,26 +356,16 @@ Emotional State: {EMOTIONAL_STATE}
 
 6. 🚫 NEVER REFUSE
    - Player does anything? Show the result
-   - Romance? Intrigue, flirt, tension
-   - Violence? Consequences, wounds, trauma
-   - Magic? Revelation, artifacts, powers
 
 ══════════════════════════════════════════════════════
 ✍️ WRITING STYLE
 ══════════════════════════════════════════════════════
-
 LENGTH: 2-3 sentences maximum
 LANGUAGE: ENGLISH ONLY
 NO: Other languages, Markdown, emoji
 YES: Vivid language, short phrases, verbs
 
-══════════════════════════════════════════════════════
-✅ REQUIRED ELEMENTS
-══════════════════════════════════════════════════════
-
-✅ DESCRIBE THE MOMENT
-✅ SHOW WORLD'S REACTION
-✅ IMPLY NEXT CHOICES
+NOTE: Use this deep character context to inform GM decisions, reactions, and story beats.
 `;
   }
 }
