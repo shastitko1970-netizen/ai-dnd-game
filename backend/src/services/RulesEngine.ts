@@ -3,7 +3,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { CustomContent, MergedRules, Character, Spell } from '../types/index.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
  * Core D&D 5e Rules Engine
@@ -38,12 +39,41 @@ export class RulesEngine {
 
   /**
    * Load official rules from dnd-5e-rules.json
+   * Tries multiple paths to handle both development and production
    */
   async loadCoreRules(): Promise<void> {
     try {
-      const filePath = path.join(__dirname, '..', '..', 'data', 'dnd-5e-rules.json');
-      const raw = await fs.readFile(filePath, 'utf-8');
-      const data = JSON.parse(raw);
+      // Try multiple paths to find the JSON file
+      const possiblePaths = [
+        // During development: backend/src/data/dnd-5e-rules.json (compiled to dist/data)
+        path.join(__dirname, '..', 'data', 'dnd-5e-rules.json'),
+        // From dist (after build): dist/services/../data/dnd-5e-rules.json
+        path.join(__dirname, '..', '..', 'data', 'dnd-5e-rules.json'),
+        // Fallback: from root
+        path.join(process.cwd(), 'backend', 'src', 'data', 'dnd-5e-rules.json'),
+        path.join(process.cwd(), 'src', 'data', 'dnd-5e-rules.json'),
+      ];
+
+      let data = null;
+      let filePath = '';
+
+      for (const tryPath of possiblePaths) {
+        try {
+          console.log(`🔍 Trying to load from: ${tryPath}`);
+          const raw = await fs.readFile(tryPath, 'utf-8');
+          data = JSON.parse(raw);
+          filePath = tryPath;
+          console.log(`✅ Successfully loaded rules from: ${filePath}`);
+          break;
+        } catch (e) {
+          // Try next path
+          continue;
+        }
+      }
+
+      if (!data) {
+        throw new Error(`Could not find dnd-5e-rules.json in any of: ${possiblePaths.join(', ')}`);
+      }
 
       // Load races from JSON
       if (data.races) {
@@ -85,6 +115,7 @@ export class RulesEngine {
     } catch (error) {
       console.error('⚠️ Error loading core rules from JSON:', error);
       // Fallback to empty but valid structure
+      console.log('ℹ️ Using fallback empty rules structure');
       this.mergeRules();
     }
   }
