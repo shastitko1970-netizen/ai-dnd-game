@@ -1,14 +1,16 @@
-// AI DM Service на Claude (Anthropic) с быстрым fallback
+// AI DM Service на Claude Haiku (самая дешёвая модель) с fallback
 
 import dotenv from 'dotenv';
 import { Anthropic } from '@anthropic-ai/sdk';
 import type { Character, World } from '../types/index.js';
 
-// Загружаем .env в этом модуле
+// Загружаем .env
 dotenv.config();
 
 let client: Anthropic | null = null;
 let aiEnabled = false;
+
+const MODEL = 'claude-3-haiku-20250307'; // Самая дешёвая модель
 
 /**
  * Инициализировать Claude клиент
@@ -16,7 +18,6 @@ let aiEnabled = false;
 function initializeClient(): void {
   if (client) return;
   
-  // Проверяем API ключ
   const apiKey = process.env.ANTHROPIC_API_KEY;
   
   if (!apiKey || apiKey.trim().length === 0) {
@@ -32,47 +33,43 @@ function initializeClient(): void {
     });
     
     aiEnabled = true;
-    console.log('✅ Claude AI инициализирован, API ключ:', apiKey.substring(0, 20) + '...');
+    console.log(`✅ Claude Haiku AI инициализирован (${MODEL})`);
+    console.log('💰 Цена: самая дешёвая ($0.80/M input, $4/M output)');
   } catch (e: any) {
-    console.error('❌ Ошибка инициализации Claude:', e.message);
+    console.error('❌ Ошибка инициализации:', e.message);
     aiEnabled = false;
   }
 }
 
-// Пытаемся инициализировать при загружении модуля
+// Пытаемся инициализировать
 initializeClient();
 
 export class AIService {
   /**
-   * Генерируем начальный нарратив для новой игры
+   * Генерируем начальный нарратив
    */
   static async generateInitialNarrative(
     character: Character,
     world: World
   ): Promise<string> {
-    // Fallback нарратив
-    const fallbackNarrative = `Вы просыпаетесь в ${world.name}. ${character.name}, ${character.race} ${character.class}, чувствует тяжесть предстоящих испытаний. Тёмный лес окружает вас, а впереди слышны странные звуки...`;
+    const fallbackNarrative = `Вы просыпаетесь в ${world.name}. ${character.name}, ${character.race} ${character.class}, слышит странные звуки и чувствует опасность...`;
     
     if (!aiEnabled || !client) {
-      console.log('⚠️  Claude недоступен, используется fallback нарратив');
       return fallbackNarrative;
     }
 
-    const systemPrompt = `Ты - великолепный D&D 5e Мастер Подземелья.
-Кратко: не более 2 предложений.
-Интригующе: затягивай в приключение.
-На русском.`;
+    const systemPrompt = `Ты - D&D 5e Мастер Подземелья. Нарратив краткие (макс 2 предложения), вызывающие, на русском.`;
 
-    const userPrompt = `НОВАЯ ИГРА:
-Мир: ${world.name} - ${world.description}
+    const userPrompt = `НОВАЯ ИГРА.
+Мир: ${world.name}
 Герой: ${character.name}, ${character.race} ${character.class}
 
-Напиши загадочную начальную сцену для ${character.name}.`;
+Напиши загадочную сцену.`;
 
     try {
       const response = await client.messages.create({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 300,
+        model: MODEL,
+        max_tokens: 200,
         messages: [
           {
             role: 'user',
@@ -83,22 +80,19 @@ export class AIService {
       });
 
       const result = response.content[0].type === 'text' ? response.content[0].text : fallbackNarrative;
-      console.log('✅ Claude нарратив генерирован');
+      console.log('✅ AI генерация нарратива успешна');
       return result;
     } catch (error: any) {
-      console.error('❌ Claude ошибка:', error.message);
-      
-      // Отключаем на сетевых ошибках
+      console.error('❌ AI ошибка:', error.message);
       if (error.message?.includes('Connection') || error.message?.includes('timeout')) {
         aiEnabled = false;
       }
-      
       return fallbackNarrative;
     }
   }
 
   /**
-   * Генерируем ответ на действие игрока
+   * Генерируем ответ на действие
    */
   static async generateActionResponse(
     action: string,
@@ -106,24 +100,24 @@ export class AIService {
     character: Character,
     world: World
   ): Promise<string> {
-    const fallbackResponse = `Ваше действие "${action}" имеет неожиданные последствия. Мир меняется, и перед вами открываются новые возможности...`;
+    const fallbackResponse = `${character.name} наносит ${action}. Нечто меняется в мире...`;
     
     if (!aiEnabled || !client) {
       return fallbackResponse;
     }
 
-    const systemPrompt = `Ты - D&D 5e Мастер. Не более 2 предложений. На русском.`;
+    const systemPrompt = `Кораткие респонсы. D&D 5e. На русском.`;
 
-    const userPrompt = `Контекст: ${previousNarrative}
+    const userPrompt = `${character.name} делает: ${action}
 
-${character.name} делает: ${action}
+Контекст: ${previousNarrative.substring(0, 100)}
 
-Опиши результат этого действия.`;
+Напиши результат (макс 2 предложения).`;
 
     try {
       const response = await client.messages.create({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 300,
+        model: MODEL,
+        max_tokens: 200,
         messages: [
           {
             role: 'user',
@@ -135,8 +129,8 @@ ${character.name} делает: ${action}
 
       return response.content[0].type === 'text' ? response.content[0].text : fallbackResponse;
     } catch (error: any) {
-      console.error('❌ Claude ошибка:', error.message);
-      if (error.message?.includes('Connection') || error.message?.includes('timeout')) {
+      console.error('❌ AI ошибка:', error.message);
+      if (error.message?.includes('Connection')) {
         aiEnabled = false;
       }
       return fallbackResponse;
@@ -156,14 +150,14 @@ ${character.name} делает: ${action}
       return fallbackActions;
     }
 
-    const systemPrompt = `Ответь ТОЛЬКО JSON массивом. Ничего больше. Никакого маркдауна или объяснений.`;
+    const systemPrompt = `Ответь ONLY JSON: ["действие"]. Без маркдауна.`;
 
-    const userPrompt = `["Атаковать", "Осмотреть", "Поговорить", "Отступить"] - вот формат. Подскажи 3 действия для ${narrative.substring(0, 30)}...`;
+    const userPrompt = `3 действия JSON: ["Атаковать", "Осмотреть", "Поговорить"]`;
 
     try {
       const response = await client.messages.create({
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 200,
+        model: MODEL,
+        max_tokens: 150,
         messages: [
           {
             role: 'user',
@@ -183,10 +177,7 @@ ${character.name} делает: ${action}
         return fallbackActions;
       }
     } catch (error: any) {
-      console.error('❌ Claude ошибка:', error.message);
-      if (error.message?.includes('Connection') || error.message?.includes('timeout')) {
-        aiEnabled = false;
-      }
+      console.error('❌ AI ошибка:', error.message);
       return fallbackActions;
     }
   }
