@@ -1,42 +1,41 @@
-// AI DM Service на OpenAI GPT-4 с быстрым fallback
+// AI DM Service на Claude (Anthropic) с быстрым fallback
 
 import dotenv from 'dotenv';
-import OpenAI from 'openai';
+import { Anthropic } from '@anthropic-ai/sdk';
 import type { Character, World } from '../types/index.js';
 
 // Загружаем .env в этом модуле
-// (дополнительная зарядка если main.ts ее опустил)
 dotenv.config();
 
-let client: OpenAI | null = null;
-let openAIEnabled = false; // По умолчанию fallback
+let client: Anthropic | null = null;
+let aiEnabled = false;
 
 /**
- * Инициализировать OpenAI клиент
+ * Инициализировать Claude клиент
  */
 function initializeClient(): void {
   if (client) return;
   
   // Проверяем API ключ
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.ANTHROPIC_API_KEY;
   
   if (!apiKey || apiKey.trim().length === 0) {
-    console.warn('⚠️  OPENAI_API_KEY не установлена. AI DM будет использовать fallback.');
-    openAIEnabled = false;
+    console.warn('⚠️  ANTHROPIC_API_KEY не установлена. AI DM будет использовать fallback.');
+    aiEnabled = false;
     return;
   }
   
   try {
-    client = new OpenAI({
+    client = new Anthropic({
       apiKey: apiKey,
-      timeout: 15000, // 15 секунд таймаут
+      timeout: 15000,
     });
     
-    openAIEnabled = true;
-    console.log('✅ OpenAI client инициализирован, API ключ:', apiKey.substring(0, 20) + '...');
+    aiEnabled = true;
+    console.log('✅ Claude AI инициализирован, API ключ:', apiKey.substring(0, 20) + '...');
   } catch (e: any) {
-    console.error('❌ Ошибка инициализации OpenAI:', e.message);
-    openAIEnabled = false;
+    console.error('❌ Ошибка инициализации Claude:', e.message);
+    aiEnabled = false;
   }
 }
 
@@ -54,47 +53,44 @@ export class AIService {
     // Fallback нарратив
     const fallbackNarrative = `Вы просыпаетесь в ${world.name}. ${character.name}, ${character.race} ${character.class}, чувствует тяжесть предстоящих испытаний. Тёмный лес окружает вас, а впереди слышны странные звуки...`;
     
-    if (!openAIEnabled || !client) {
-      console.log('⚠️  OpenAI недоступен, используется fallback нарратив');
+    if (!aiEnabled || !client) {
+      console.log('⚠️  Claude недоступен, используется fallback нарратив');
       return fallbackNarrative;
     }
 
-    const prompt = `Ты - AI Мастер Подземелья D&D 5e.
-    
-Поставь игрока в интересную ситуацию.
-    
-Герой: ${character.name}, ${character.race} ${character.class}
-Мир: ${world.name}
-Описание мира: ${world.description}
+    const systemPrompt = `Ты - великолепный D&D 5e Мастер Подземелья.
+Кратко: не более 2 предложений.
+Интригующе: затягивай в приключение.
+На русском.`;
 
-Напиши загадочную, вызывающую действие сцену не более 2 предложений.`;
+    const userPrompt = `НОВАЯ ИГРА:
+Мир: ${world.name} - ${world.description}
+Герой: ${character.name}, ${character.race} ${character.class}
+
+Напиши загадочную начальную сцену для ${character.name}.`;
 
     try {
-      const response = await client.chat.completions.create({
-        model: 'gpt-4',
+      const response = await client.messages.create({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 300,
         messages: [
           {
-            role: 'system',
-            content: 'Ты - D&D 5e Мастер Подземелья. Генерируешь вызывающие сцены. Коротко, активно, интригующе.'
-          },
-          {
             role: 'user',
-            content: prompt
-          }
+            content: userPrompt,
+          },
         ],
-        temperature: 0.8,
-        max_tokens: 200,
+        system: systemPrompt,
       });
 
-      const result = response.choices[0].message.content || fallbackNarrative;
-      console.log('✅ OpenAI нарратив генерирован');
+      const result = response.content[0].type === 'text' ? response.content[0].text : fallbackNarrative;
+      console.log('✅ Claude нарратив генерирован');
       return result;
     } catch (error: any) {
-      console.error('❌ OpenAI ошибка:', error.message);
+      console.error('❌ Claude ошибка:', error.message);
       
-      // Отключаем OpenAI на сетевых ошибках
-      if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT' || error.message?.includes('Connection')) {
-        openAIEnabled = false;
+      // Отключаем на сетевых ошибках
+      if (error.message?.includes('Connection') || error.message?.includes('timeout')) {
+        aiEnabled = false;
       }
       
       return fallbackNarrative;
@@ -110,35 +106,38 @@ export class AIService {
     character: Character,
     world: World
   ): Promise<string> {
-    const fallbackResponse = `Ваше действие "${action}" имеет неожиданный результат. Окружающий мир меняется, и перед вами открывается новый путь.`;
+    const fallbackResponse = `Ваше действие "${action}" имеет неожиданные последствия. Мир меняется, и перед вами открываются новые возможности...`;
     
-    if (!openAIEnabled || !client) {
+    if (!aiEnabled || !client) {
       return fallbackResponse;
     }
 
-    const prompt = `Игровой контекст: ${previousNarrative}\nОтветь на действие "${action}":`;
+    const systemPrompt = `Ты - D&D 5e Мастер. Не более 2 предложений. На русском.`;
+
+    const userPrompt = `Контекст: ${previousNarrative}
+
+${character.name} делает: ${action}
+
+Опиши результат этого действия.`;
 
     try {
-      const response = await client.chat.completions.create({
-        model: 'gpt-4',
+      const response = await client.messages.create({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 300,
         messages: [
           {
-            role: 'system',
-            content: 'Ты - D&D 5e Мастер. Коротко, динамично.'
-          },
-          {
             role: 'user',
-            content: prompt
-          }
+            content: userPrompt,
+          },
         ],
-        temperature: 0.85,
-        max_tokens: 250,
+        system: systemPrompt,
       });
 
-      return response.choices[0].message.content || fallbackResponse;
+      return response.content[0].type === 'text' ? response.content[0].text : fallbackResponse;
     } catch (error: any) {
-      if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT' || error.message?.includes('Connection')) {
-        openAIEnabled = false;
+      console.error('❌ Claude ошибка:', error.message);
+      if (error.message?.includes('Connection') || error.message?.includes('timeout')) {
+        aiEnabled = false;
       }
       return fallbackResponse;
     }
@@ -153,36 +152,40 @@ export class AIService {
   ): Promise<string[]> {
     const fallbackActions = ['Атаковать', 'Осмотреть', 'Поговорить', 'Отступить'];
     
-    if (!openAIEnabled || !client) {
+    if (!aiEnabled || !client) {
       return fallbackActions;
     }
 
-    const prompt = `Какие действия можно сделать? JSON array ["действие", ...]`;
+    const systemPrompt = `Ответь ТОЛЬКО JSON массивом. Ничего больше. Никакого маркдауна или объяснений.`;
+
+    const userPrompt = `["Атаковать", "Осмотреть", "Поговорить", "Отступить"] - вот формат. Подскажи 3 действия для ${narrative.substring(0, 30)}...`;
 
     try {
-      const response = await client.chat.completions.create({
-        model: 'gpt-4',
+      const response = await client.messages.create({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 200,
         messages: [
           {
-            role: 'system',
-            content: 'Ответь ONLY JSON array, ничего больше.'
-          },
-          {
             role: 'user',
-            content: prompt
-          }
+            content: userPrompt,
+          },
         ],
-        temperature: 0.8,
-        max_tokens: 150,
+        system: systemPrompt,
       });
 
-      const content = response.choices[0].message.content || '[]';
+      const content = response.content[0].type === 'text' ? response.content[0].text : '[]';
       const cleanContent = content.replace(/```json|```|`/g, '').trim();
-      const parsed = JSON.parse(cleanContent);
-      return Array.isArray(parsed) ? parsed : fallbackActions;
+      
+      try {
+        const parsed = JSON.parse(cleanContent);
+        return Array.isArray(parsed) ? parsed : fallbackActions;
+      } catch {
+        return fallbackActions;
+      }
     } catch (error: any) {
-      if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT' || error.message?.includes('Connection')) {
-        openAIEnabled = false;
+      console.error('❌ Claude ошибка:', error.message);
+      if (error.message?.includes('Connection') || error.message?.includes('timeout')) {
+        aiEnabled = false;
       }
       return fallbackActions;
     }
