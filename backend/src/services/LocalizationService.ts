@@ -1,9 +1,14 @@
 /**
  * Система локализации D&D содержимого
  * Переводит расы, классы, способности на русский
+ * + Терминология игры (Бросок, Проверка, итого вместо total, etc)
  */
 
 interface TranslationMap {
+  [key: string]: string;
+}
+
+interface ActionDescriptions {
   [key: string]: string;
 }
 
@@ -79,7 +84,6 @@ const raceAliases: TranslationMap = {
   'Полурослик': 'Halfling',
   'полурослик': 'Halfling',
   'Эльф': 'Elf',
-  'эльф': 'Elf',
   'эльф': 'Elf',
   'Эльф': 'Elf',
   'Орк': 'Orc',
@@ -187,6 +191,88 @@ const skillTranslations: TranslationMap = {
   'Survival': 'Выживание',
 };
 
+// НОВОЕ: Терминология D&D на русском
+const gameTerms: TranslationMap = {
+  'Roll': 'Бросок',
+  'roll': 'бросок',
+  'd20': 'к20',
+  'Check': 'Проверка',
+  'check': 'проверка',
+  'Attack Roll': 'Бросок атаки',
+  'Saving Throw': 'Спасбросок',
+  'Skill Check': 'Проверка умения',
+  'Hit': 'Попадание',
+  'Miss': 'Промах',
+  'Critical Hit': 'Крит',
+  'Natural 20': 'Натуральная 20',
+  'Natural 1': 'Натуральная 1',
+  'Damage': 'Урон',
+  'Healing': 'Исцеление',
+  'modifier': 'модификатор',
+  'mod': 'мод',
+  'total': 'итого',
+  'Success': 'Успех',
+  'Failure': 'Неудача',
+  'Advantage': 'Преимущество',
+  'Disadvantage': 'Помеха',
+  'Turn': 'Ход',
+  'Round': 'Раунд',
+  'Initiative': 'Инициатива',
+  'Action': 'Действие',
+  'Bonus Action': 'Бонусное действие',
+  'Reaction': 'Реакция',
+};
+
+// НОВОЕ: Описания действий игрока (без личных местоимений)
+const actionDescriptions: ActionDescriptions = {
+  'осмотреть': 'внимательно осматриваешь окрестности',
+  'проверить': 'тщательно проверяешь этот предмет',
+  'подготовить': 'готовишь своё оружие и броню',
+  'настроить': 'настраиваешь боевое снаряжение',
+  'приблизиться': 'осторожно приближаешься ближе',
+  'отступить': 'быстро отступаешь назад',
+  'атаковать': 'переходишь в наступление',
+  'защищаться': 'принимаешь боевую позицию',
+  'спрятаться': 'ищешь место для укрытия',
+  'выжидать': 'занимаешь удобную позицию и ждёшь',
+  'прислушиваться': 'напрягаешь слух, пытаясь уловить звуки',
+  'понюхать': 'вдыхаешь запахи воздуха',
+  'почувствовать': 'обращаешь внимание на ощущения',
+  'попробовать': 'тестируешь это на себе',
+  'обойти': 'обходишь препятствие',
+  'пролезть': 'сжимаешься и протискиваешься сквозь щель',
+  'прыгнуть': 'набираешь разбег и совершаешь прыжок',
+  'карабкаться': 'начинаешь карабкаться вверх',
+  'говорить': 'обращаешься с речью',
+  'крикнуть': 'кричишь изо всех сил',
+  'помогать': 'приходишь на помощь',
+  'помешать': 'стараешься помешать или остановить',
+  'торговаться': 'вступаешь в переговоры о цене',
+  'клясться': 'даёшь клятву или обещание',
+};
+
+// НОВОЕ: Исправление частых ошибок AI перевода
+const translationFixes: TranslationMap = {
+  'осколождение': 'ледяной щит',
+  'осколож': 'лёд',
+  'шелдаст': 'пыль развалин',
+  'расщепление': 'расщепление',
+};
+
+// НОВОЕ: Исправления для неправильного перевода
+const wrongToCorrect: TranslationMap = {
+  'кидок': 'бросок',
+  'кидать': 'бросать',
+  'кинуть': 'бросить',
+  'go': 'старт',
+  'ok': 'хорошо',
+  'hp': 'гп',
+  'ac': 'ко',
+  'damage': 'урон',
+  'heal': 'исцелить',
+  'roll': 'бросок',
+};
+
 export class LocalizationService {
   /**
    * Переводит название расы на русский
@@ -257,6 +343,61 @@ export class LocalizationService {
   }
 
   /**
+   * НОВОЕ: Переводит игровые термины
+   */
+  static translateTerm(term: string): string {
+    return gameTerms[term] || term;
+  }
+
+  /**
+   * НОВОЕ: Форматирует описание действия игрока
+   * Вход: "осмотреть", "атаковать"
+   * Выход: "ты внимательно осматриваешь окрестности"
+   */
+  static formatActionDescription(actionInput: string): string {
+    const lower = actionInput.toLowerCase().trim();
+
+    // Ищем в словаре
+    for (const [verb, description] of Object.entries(actionDescriptions)) {
+      if (lower.includes(verb)) {
+        return `Ты ${description}`; // Формат: "Ты делаешь X"
+      }
+    }
+
+    // Fallback: просто "ты делаешь X"
+    return `Ты ${lower}`;
+  }
+
+  /**
+   * НОВОЕ: Исправляет частые ошибки перевода AI
+   */
+  static fixMalformedTranslations(text: string): string {
+    let result = text;
+
+    // Исправляем известные ошибки
+    for (const [wrong, correct] of Object.entries(translationFixes)) {
+      const regex = new RegExp(`\\b${wrong}\\b`, 'gi');
+      result = result.replace(regex, correct);
+    }
+
+    return result;
+  }
+
+  /**
+   * НОВОЕ: Исправляет англицизмы и неправильный перевод
+   */
+  static fixEnglicisms(text: string): string {
+    let result = text;
+
+    for (const [wrong, correct] of Object.entries(wrongToCorrect)) {
+      const regex = new RegExp(`\\b${wrong}\\b`, 'gi');
+      result = result.replace(regex, correct);
+    }
+
+    return result;
+  }
+
+  /**
    * Переводит объект персонажа (для фронтенда)
    */
   static localizeCharacter(character: any): any {
@@ -299,6 +440,13 @@ export class LocalizationService {
    */
   static getAllClassTranslations(): TranslationMap {
     return classTranslations;
+  }
+
+  /**
+   * НОВОЕ: Получить все описания действий
+   */
+  static getAllActionDescriptions(): ActionDescriptions {
+    return actionDescriptions;
   }
 }
 
