@@ -1,5 +1,6 @@
 import { Character } from '../types/index.js';
 import { RulesEngine } from './RulesEngine.js';
+import { LocalizationService } from './LocalizationService.js';
 
 export class CharacterService {
   private rulesEngine: RulesEngine;
@@ -8,16 +9,66 @@ export class CharacterService {
     this.rulesEngine = rulesEngine;
   }
 
+  /**
+   * Попытка найти оригинальное название расы (обратный маппинг)
+   */
+  private findOriginalRaceName(raceName: string, mergedRules: any): string {
+    // Сначала пробуем найти как есть (на случай английского или кастомного)
+    if (mergedRules.races[raceName]) {
+      return raceName;
+    }
+    
+    // Если не нашли, пробуем обратный перевод
+    const translations = LocalizationService.getAllRaceTranslations();
+    
+    // Ищем по значениям (русским)
+    for (const [english, russian] of Object.entries(translations)) {
+      if (russian === raceName) {
+        return english;
+      }
+    }
+    
+    // Не нашли - возвращаем как есть
+    return raceName;
+  }
+
+  /**
+   * Попытка найти оригинальное название класса (обратный маппинг)
+   */
+  private findOriginalClassName(className: string, mergedRules: any): string {
+    // Сначала пробуем найти как есть
+    if (mergedRules.classes[className]) {
+      return className;
+    }
+    
+    // Обратный перевод
+    const translations = LocalizationService.getAllClassTranslations();
+    
+    for (const [english, russian] of Object.entries(translations)) {
+      if (russian === className) {
+        return english;
+      }
+    }
+    
+    return className;
+  }
+
   createCharacter(data: any, mergedRules: any): Character {
+    // Преобразовываем русские названия в английские
+    const originalRaceName = this.findOriginalRaceName(data.race, mergedRules);
+    const originalClassName = this.findOriginalClassName(data.class, mergedRules);
+    
     // Validate race and class exist
-    const race = mergedRules.races[data.race];
-    const clazz = mergedRules.classes[data.class];
+    const race = mergedRules.races[originalRaceName];
+    const clazz = mergedRules.classes[originalClassName];
 
     if (!race) {
-      throw new Error(`Race '${data.race}' not found in available races`);
+      console.error('❌ Available races:', Object.keys(mergedRules.races));
+      throw new Error(`Race '${data.race}' (tried: '${originalRaceName}') not found in available races`);
     }
     if (!clazz) {
-      throw new Error(`Class '${data.class}' not found in available classes`);
+      console.error('❌ Available classes:', Object.keys(mergedRules.classes));
+      throw new Error(`Class '${data.class}' (tried: '${originalClassName}') not found in available classes`);
     }
 
     // Validate required fields
@@ -43,12 +94,13 @@ export class CharacterService {
     }
 
     // Create character with base stats
+    // Используем оригинальные названия для совместимости с рулами
     const character: Character = {
       id: `char-${Date.now()}`,
       name: data.name.trim(),
       level: 1,
-      race: data.race,
-      class: data.class,
+      race: originalRaceName,
+      class: originalClassName,
       gender: data.gender || 'Other',
       abilities,
       skills: this.initializeSkills(),
