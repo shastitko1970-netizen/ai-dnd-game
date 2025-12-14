@@ -8,7 +8,7 @@ export default function CustomContent() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-12">
-      <h2 className="text-4xl font-bold text-teal-400 mb-8">Custom Content Hub</h2>
+      <h2 className="text-4xl font-bold text-teal-400 mb-8">Хаб Пользовательского Контента</h2>
 
       <div className="flex gap-4 mb-8">
         {(['races', 'classes', 'feats'] as const).map(t => (
@@ -19,46 +19,48 @@ export default function CustomContent() {
               tab === t ? 'bg-teal-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
             }`}
           >
-            {t.charAt(0).toUpperCase() + t.slice(1)}
+            {t === 'races' && 'Расы'}
+            {t === 'classes' && 'Классы'}
+            {t === 'feats' && 'Особенности'}
           </button>
         ))}
       </div>
 
       {tab === 'races' && (
         <div>
-          <Link href="/custom-content/races">
-            <button className="btn btn-primary mb-6">View/Create Custom Races</button>
+          <Link href="#">
+            <button className="btn btn-primary mb-6">Посмотри/Создай пользовательские расы</button>
           </Link>
         </div>
       )}
 
       {tab === 'classes' && (
         <div>
-          <Link href="/custom-content/classes">
-            <button className="btn btn-primary mb-6">View/Create Custom Classes</button>
+          <Link href="#">
+            <button className="btn btn-primary mb-6">Посмотри/Создай пользовательские классы</button>
           </Link>
         </div>
       )}
 
       {tab === 'feats' && (
         <div>
-          <Link href="/custom-content/feats">
-            <button className="btn btn-primary mb-6">View/Create Custom Feats</button>
+          <Link href="#">
+            <button className="btn btn-primary mb-6">Посмотри/Создай пользовательские особенности</button>
           </Link>
         </div>
       )}
 
       <div className="card bg-slate-800">
-        <h3 className="text-xl font-bold text-teal-400 mb-4">About Custom Content</h3>
+        <h3 className="text-xl font-bold text-teal-400 mb-4">О пользовательском контенте</h3>
         <p className="text-slate-300 mb-4">
-          Create your own races, classes, and feats to use in your D&D adventures!
+          Создавай свои расы, классы и особенности для использования в приключениях!
         </p>
         <ul className="text-slate-300 list-disc list-inside space-y-2">
-          <li>Custom races can modify ability scores and add features</li>
-          <li>Custom classes define hit dice and class features</li>
-          <li>Custom feats give special abilities and bonuses</li>
-          <li>All custom content is validated and merged with official rules</li>
-          <li>Use your custom content in character creation</li>
+          <li>Пользовательские расы могут менять показатели характера и добавлять способности</li>
+          <li>Пользовательские классы определяют кубики здоровья и способности уровня</li>
+          <li>Пользовательские особенности дают специальные способности и бонусы</li>
+          <li>Весь пользовательский контент проверяется и объединяется с официальными правилами</li>
+          <li>Используй свой пользовательский контент при создании персонажа</li>
         </ul>
       </div>
     </div>

@@ -2,43 +2,25 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useGameStore } from '@/lib/store';
-import { fetchMergedRules, createCharacter, startGame } from '@/lib/api';
 
 export default function CharacterCreate() {
   const router = useRouter();
   const [step, setStep] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [mergedRules, setMergedRules] = useState<any>(null);
+  const [selectedWorld, setSelectedWorld] = useState<any>(null);
   
   const [formData, setFormData] = useState({
     name: '',
-    gender: 'Male',
-    race: '',
-    class: '',
+    gender: 'Мужской',
+    race: 'Human',
+    class: 'Fighter',
     feats: [] as string[]
   });
 
-  const { setCharacter, setSessionId, selectedWorld } = useGameStore();
-
   useEffect(() => {
-    const loadRules = async () => {
-      try {
-        const data = await fetchMergedRules();
-        setMergedRules(data.data);
-        if (Object.keys(data.data.races || {}).length > 0) {
-          setFormData(prev => ({ ...prev, race: Object.keys(data.data.races)[0] }));
-        }
-        if (Object.keys(data.data.classes || {}).length > 0) {
-          setFormData(prev => ({ ...prev, class: Object.keys(data.data.classes)[0] }));
-        }
-      } catch (error) {
-        console.error('Failed to load rules:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadRules();
+    const world = localStorage.getItem('selectedWorld');
+    if (world) {
+      setSelectedWorld(JSON.parse(world));
+    }
   }, []);
 
   const handleNext = () => {
@@ -51,78 +33,88 @@ export default function CharacterCreate() {
 
   const handleCreate = async () => {
     try {
-      const charResponse = await createCharacter(formData);
-      const character = charResponse.data;
-      setCharacter(character);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/character/create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
 
-      const gameResponse = await startGame(character, selectedWorld);
-      setSessionId(gameResponse.data.sessionId);
+      if (!response.ok) {
+        throw new Error('Failed to create character');
+      }
 
+      const character = await response.json();
+      localStorage.setItem('character', JSON.stringify(character.data));
       router.push('/game');
     } catch (error) {
-      console.error('Failed to create character:', error);
+      console.error('Ошибка создания персонажа:', error);
+      alert('Не удалось создать персонажа');
     }
   };
-
-  if (loading) return <div className="text-center py-12">Loading...</div>;
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-12">
       <div className="card">
-        <h2 className="text-3xl font-bold text-teal-400 mb-6">Create Your Character</h2>
-        <p className="text-slate-300 mb-6">Step {step} of 3</p>
+        <h2 className="text-3xl font-bold text-teal-400 mb-6">Создай персонажа</h2>
+        <p className="text-slate-300 mb-6">Шаг {step} из 3</p>
 
         {step === 1 && (
           <div className="space-y-4">
             <div>
-              <label className="block text-slate-300 mb-2">Name</label>
+              <label className="block text-slate-300 mb-2">Имя</label>
               <input
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Your character's name"
+                placeholder="Имя твоего персонажа"
                 className="w-full"
               />
             </div>
             <div>
-              <label className="block text-slate-300 mb-2">Gender</label>
+              <label className="block text-slate-300 mb-2">Пол</label>
               <select
                 value={formData.gender}
                 onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
                 className="w-full"
               >
-                <option>Male</option>
-                <option>Female</option>
-                <option>Other</option>
+                <option>Мужской</option>
+                <option>Женский</option>
+                <option>Другое</option>
               </select>
             </div>
           </div>
         )}
 
-        {step === 2 && mergedRules && (
+        {step === 2 && (
           <div className="space-y-4">
             <div>
-              <label className="block text-slate-300 mb-2">Race</label>
+              <label className="block text-slate-300 mb-2">Раса</label>
               <select
                 value={formData.race}
                 onChange={(e) => setFormData({ ...formData, race: e.target.value })}
                 className="w-full"
               >
-                {Object.keys(mergedRules.races || {}).map(race => (
-                  <option key={race} value={race}>{race}</option>
-                ))}
+                <option value="Human">Человек</option>
+                <option value="Elf">Эльф</option>
+                <option value="Dwarf">Дворф</option>
+                <option value="Halfling">Полурослик</option>
               </select>
             </div>
             <div>
-              <label className="block text-slate-300 mb-2">Class</label>
+              <label className="block text-slate-300 mb-2">Класс</label>
               <select
                 value={formData.class}
                 onChange={(e) => setFormData({ ...formData, class: e.target.value })}
                 className="w-full"
               >
-                {Object.keys(mergedRules.classes || {}).map(clazz => (
-                  <option key={clazz} value={clazz}>{clazz}</option>
-                ))}
+                <option value="Barbarian">Варвар</option>
+                <option value="Bard">Бард</option>
+                <option value="Cleric">Жрец</option>
+                <option value="Fighter">Боец</option>
+                <option value="Rogue">Плут</option>
+                <option value="Wizard">Волшебник</option>
               </select>
             </div>
           </div>
@@ -130,25 +122,25 @@ export default function CharacterCreate() {
 
         {step === 3 && (
           <div className="card bg-slate-800">
-            <h3 className="text-xl font-bold text-teal-400 mb-4">Review Character</h3>
-            <p className="text-slate-300"><strong>Name:</strong> {formData.name}</p>
-            <p className="text-slate-300"><strong>Race:</strong> {formData.race}</p>
-            <p className="text-slate-300"><strong>Class:</strong> {formData.class}</p>
-            <p className="text-slate-300 mt-4 text-sm">Ready to begin your adventure?</p>
+            <h3 className="text-xl font-bold text-teal-400 mb-4">Проверь персонажа</h3>
+            <p className="text-slate-300"><strong>Имя:</strong> {formData.name}</p>
+            <p className="text-slate-300"><strong>Раса:</strong> {formData.race}</p>
+            <p className="text-slate-300"><strong>Класс:</strong> {formData.class}</p>
+            <p className="text-slate-300 mt-4 text-sm">Готов начать приключение?</p>
           </div>
         )}
 
         <div className="flex gap-4 mt-8">
           <button onClick={handleBack} className="btn btn-secondary flex-1" disabled={step === 1}>
-            Back
+            Назад
           </button>
           {step < 3 ? (
             <button onClick={handleNext} className="btn btn-primary flex-1">
-              Next
+              Дальше
             </button>
           ) : (
             <button onClick={handleCreate} className="btn btn-primary flex-1">
-              Create Character
+              Создать персонажа
             </button>
           )}
         </div>
