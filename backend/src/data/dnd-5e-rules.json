@@ -1,75 +1,439 @@
 {
-  "version": "D&D 5e (2024 Official - FIXED & COMPLETE)",
+  "version": "D&D 5e (2024 - Refactored with Traits & Personalities)",
   "metadata": {
-    "lastUpdated": "2025-12-13T19:37:00Z",
+    "lastUpdated": "2025-12-14T18:15:00Z",
     "status": "PRODUCTION-READY",
-    "completeness": "COMPLETE - No stubs, no dupes, real data",
-    "sourceBooks": [
-      "Player's Handbook",
-      "Dungeon Master's Guide",
-      "Monster Manual",
-      "Xanathar's Guide to Everything"
-    ],
-    "contentStats": {
-      "classes": 12,
-      "races": 35,
-      "spells": 156,
-      "monsters": 65,
-      "feats": 82,
-      "skills": 18,
-      "conditions": 15
-    }
+    "features": ["Races", "Traits (Archetypes)", "Classes", "Backgrounds", "Personalities"]
   },
   "races": {
-    "Aarakocra": {"name": "Aarakocra", "size": "Medium", "speed": "Walk 25 ft., Fly 50 ft.", "abilityBonus": {"DEX": 2, "WIS": 1}, "darkvision": false, "features": ["Talons (1d4 unarmed strike)", "Flight"], "source": "Elemental Evil"},
-    "Aasimar": {"name": "Aasimar", "size": "Medium", "speed": 30, "abilityBonus": {"CHA": 2, "WIS": 1}, "darkvision": 60, "features": ["Celestial Resilience", "Light Bearer", "Healing Hands"], "source": "Volo's Guide"},
-    "Bugbear": {"name": "Bugbear", "size": "Medium", "speed": 30, "abilityBonus": {"STR": 2, "DEX": 1}, "darkvision": 60, "features": ["Powerful Build", "Surprise Attack (1d8 extra damage)"], "source": "Volo's Guide"},
-    "Centaur": {"name": "Centaur", "size": "Large", "speed": 40, "abilityBonus": {"STR": 2, "WIS": 1}, "features": ["Charge (knock prone on hit)", "Hooves (1d6 melee)"], "source": "Mythic Odysseys"},
-    "Changeling": {"name": "Changeling", "size": "Medium", "speed": 30, "abilityBonus": {"DEX": 1, "CHA": 2}, "features": ["Shapechanger (change appearance)"], "source": "Eberron"},
-    "Dhampir": {"name": "Dhampir", "size": "Medium", "speed": 30, "abilityBonus": {"DEX": 2, "CHA": 1}, "darkvision": 60, "features": ["Vampiric Resilience (resistance to necrotic)", "Fanged Bite (1d4 piercing)"], "source": "Van Richten's Guide"},
-    "Dragonborn": {"name": "Dragonborn", "size": "Medium", "speed": 30, "abilityBonus": {"STR": 2, "CHA": 1}, "features": ["Draconic Ancestry", "Breath Weapon"], "source": "Player's Handbook"},
-    "Dwarf": {"name": "Dwarf", "size": "Medium", "speed": 25, "abilityBonus": {"CON": 2}, "darkvision": 60, "features": ["Stonecunning", "Dwarven Resilience"], "source": "Player's Handbook"},
-    "Elf": {"name": "Elf", "size": "Medium", "speed": 30, "abilityBonus": {"DEX": 2}, "darkvision": 60, "features": ["Keen Senses", "Fey Ancestry", "Trance"], "source": "Player's Handbook"},
-    "Fairy": {"name": "Fairy", "size": "Tiny", "speed": "Walk 10 ft., Fly 30 ft.", "abilityBonus": {"DEX": 2, "INT": 1}, "features": ["Flight", "Magic Resistance"], "source": "Monsters of the Multiverse"},
-    "Firbolg": {"name": "Firbolg", "size": "Large", "speed": 30, "abilityBonus": {"WIS": 2, "STR": 1}, "features": ["Hidden Step (hide as bonus action)", "Speak with Animals"], "source": "Volo's Guide"},
-    "Genasi_Air": {"name": "Air Genasi", "size": "Medium", "speed": 30, "abilityBonus": {"DEX": 2, "CON": 1}, "features": ["Unending Breath (hold breath)", "Levitate"], "source": "Elemental Evil"},
-    "Genasi_Earth": {"name": "Earth Genasi", "size": "Medium", "speed": 30, "abilityBonus": {"STR": 2, "CON": 1}, "features": ["Earth Affinity", "Pass without Trace"], "source": "Elemental Evil"},
-    "Genasi_Fire": {"name": "Fire Genasi", "size": "Medium", "speed": 30, "abilityBonus": {"INT": 2, "WIS": 1}, "darkvision": 60, "features": ["Reach to the Blaze", "Fire Resistance"], "source": "Elemental Evil"},
-    "Genasi_Water": {"name": "Water Genasi", "size": "Medium", "speed": "30 ft., swim 30 ft.", "abilityBonus": {"WIS": 2, "STR": 1}, "features": ["Acid Resistance", "Amphibious"], "source": "Elemental Evil"},
-    "Gith": {"name": "Gith", "size": "Medium", "speed": 30, "abilityBonus": {"INT": 2, "DEX": 1}, "features": ["Martial Discipline", "Gith Psionics"], "source": "Monsters of the Multiverse"},
-    "Gnome": {"name": "Gnome", "size": "Small", "speed": 25, "abilityBonus": {"INT": 2}, "darkvision": 60, "features": ["Gnome Cunning"], "source": "Player's Handbook"},
-    "Goblin": {"name": "Goblin", "size": "Small", "speed": 30, "abilityBonus": {"DEX": 2, "CON": 1}, "darkvision": 60, "features": ["Nimble Escape (disengage/hide bonus action)"], "source": "Volo's Guide"},
-    "Goliath": {"name": "Goliath", "size": "Medium", "speed": 30, "abilityBonus": {"STR": 2, "CON": 1}, "features": ["Powerful Build", "Stone's Endurance (reduce damage)"], "source": "Volo's Guide"},
-    "Hadozee": {"name": "Hadozee", "size": "Medium", "speed": 30, "abilityBonus": {"DEX": 2, "WIS": 1}, "features": ["Dexterous Feet", "Glide"], "source": "Astral Adventures"},
-    "Half-Elf": {"name": "Half-Elf", "size": "Medium", "speed": 30, "abilityBonus": {"CHA": 2}, "darkvision": 60, "features": ["Fey Ancestry", "Skill Versatility"], "source": "Player's Handbook"},
-    "Half-Orc": {"name": "Half-Orc", "size": "Medium", "speed": 30, "abilityBonus": {"STR": 2, "CON": 1}, "darkvision": 60, "features": ["Menacing", "Relentless Endurance"], "source": "Player's Handbook"},
-    "Halfling": {"name": "Halfling", "size": "Small", "speed": 25, "abilityBonus": {"DEX": 2}, "features": ["Lucky", "Brave"], "source": "Player's Handbook"},
-    "Hobgoblin": {"name": "Hobgoblin", "size": "Medium", "speed": 30, "abilityBonus": {"INT": 2, "CON": 1}, "darkvision": 60, "features": ["Saving Face (reroll)", "Martial Training"], "source": "Volo's Guide"},
-    "Human": {"name": "Human", "size": "Medium", "speed": 30, "abilityBonus": {"all": 1}, "features": ["Extra Feat at 1st level", "Skill Proficiency"], "source": "Player's Handbook"},
-    "Kalashtar": {"name": "Kalashtar", "size": "Medium", "speed": 30, "abilityBonus": {"WIS": 2, "CHA": 1}, "features": ["Dual Mind", "Psychic Resilience"], "source": "Eberron"},
-    "Kenku": {"name": "Kenku", "size": "Small", "speed": 30, "abilityBonus": {"DEX": 2, "WIS": 1}, "features": ["Mimicry (mimic sounds)", "Kenku Training"], "source": "Volo's Guide"},
-    "Kobold": {"name": "Kobold", "size": "Small", "speed": 30, "abilityBonus": {"DEX": 2, "STR": -2}, "darkvision": 60, "features": ["Grovel, Cower, Beg (pack tactics)"], "source": "Volo's Guide"},
-    "Leonin": {"name": "Leonin", "size": "Medium", "speed": 35, "abilityBonus": {"STR": 2, "CON": 1}, "features": ["Claws (1d4 piercing)", "Mane (AC boost)"], "source": "Mythic Odysseys"},
-    "Lizardfolk": {"name": "Lizardfolk", "size": "Medium", "speed": "30 ft., swim 30 ft.", "abilityBonus": {"CON": 2, "WIS": 1}, "features": ["Bite (1d6 piercing)", "Cunning Artisan"], "source": "Volo's Guide"},
-    "Minotaur": {"name": "Minotaur", "size": "Large", "speed": 30, "abilityBonus": {"STR": 2, "CON": 1}, "features": ["Horns (1d8 melee)", "Imposing Presence"], "source": "Mythic Odysseys"},
-    "Orc": {"name": "Orc", "size": "Medium", "speed": 30, "abilityBonus": {"STR": 2, "CON": 1, "INT": -2}, "darkvision": 60, "features": ["Aggressive", "Powerful Build"], "source": "Volo's Guide"},
-    "Satyr": {"name": "Satyr", "size": "Medium", "speed": 40, "abilityBonus": {"CHA": 2, "DEX": 1}, "features": ["Fey", "Innate Spellcasting"], "source": "Mythic Odysseys"},
-    "Tabaxi": {"name": "Tabaxi", "size": "Medium", "speed": 30, "abilityBonus": {"DEX": 2, "CHA": 1}, "features": ["Feline Agility (double speed)", "Cat's Claws (1d4)"], "source": "Volo's Guide"},
-    "Tiefling": {"name": "Tiefling", "size": "Medium", "speed": 30, "abilityBonus": {"CHA": 2, "INT": 1}, "darkvision": 60, "features": ["Hellish Resistance", "Infernal Legacy"], "source": "Player's Handbook"},
-    "Tortle": {"name": "Tortle", "size": "Medium", "speed": 30, "abilityBonus": {"STR": 2, "WIS": 1}, "features": ["Natural AC (shell = 17)", "Shell Defense"], "source": "Xanathar's Guide"}
+    "Human": {
+      "name": "Человек",
+      "nameEn": "Human",
+      "size": "Medium",
+      "speed": 30,
+      "abilityBonus": { "all": 1 },
+      "darkvision": 0,
+      "features": ["Дополнительный подвиг на 1м уровне", "Владение дополнительным навыком"],
+      "description": "Универсальные и амбициозные",
+      "source": "Player's Handbook"
+    },
+    "Elf": {
+      "name": "Эльф",
+      "nameEn": "Elf",
+      "size": "Medium",
+      "speed": 30,
+      "abilityBonus": { "DEX": 2 },
+      "darkvision": 60,
+      "features": ["Острое зрение", "Фейское происхождение", "Медитация вместо сна"],
+      "description": "Грациозные и долгоживущие",
+      "source": "Player's Handbook"
+    },
+    "Dwarf": {
+      "name": "Гном",
+      "nameEn": "Dwarf",
+      "size": "Medium",
+      "speed": 25,
+      "abilityBonus": { "CON": 2 },
+      "darkvision": 60,
+      "features": ["Каменное чутьё", "Стойкость гномов"],
+      "description": "Выносливые мастера-ремесленники",
+      "source": "Player's Handbook"
+    },
+    "Halfling": {
+      "name": "Полурослик",
+      "nameEn": "Halfling",
+      "size": "Small",
+      "speed": 25,
+      "abilityBonus": { "DEX": 2 },
+      "darkvision": 0,
+      "features": ["Удача", "Храбрость"],
+      "description": "Маленькие, но удачливые авантюристы",
+      "source": "Player's Handbook"
+    },
+    "Dragonborn": {
+      "name": "Драконорожденный",
+      "nameEn": "Dragonborn",
+      "size": "Medium",
+      "speed": 30,
+      "abilityBonus": { "STR": 2, "CHA": 1 },
+      "darkvision": 0,
+      "features": ["Происхождение дракона", "Дыхательное оружие"],
+      "description": "Потомки драконов с магическими способностями",
+      "source": "Player's Handbook"
+    },
+    "Gnome": {
+      "name": "Гномик",
+      "nameEn": "Gnome",
+      "size": "Small",
+      "speed": 25,
+      "abilityBonus": { "INT": 2 },
+      "darkvision": 60,
+      "features": ["Гномья хитрость"],
+      "description": "Изобретательные мастера магии",
+      "source": "Player's Handbook"
+    },
+    "Half-Elf": {
+      "name": "Полуэльф",
+      "nameEn": "Half-Elf",
+      "size": "Medium",
+      "speed": 30,
+      "abilityBonus": { "CHA": 2 },
+      "darkvision": 60,
+      "features": ["Фейское происхождение", "Универсальность навыков"],
+      "description": "Гибриды между двумя мирами",
+      "source": "Player's Handbook"
+    },
+    "Half-Orc": {
+      "name": "Полуорк",
+      "nameEn": "Half-Orc",
+      "size": "Medium",
+      "speed": 30,
+      "abilityBonus": { "STR": 2, "CON": 1 },
+      "darkvision": 60,
+      "features": ["Угрожающее присутствие", "Неумолимая выносливость"],
+      "description": "Мощные воины с сложным происхождением",
+      "source": "Player's Handbook"
+    },
+    "Tiefling": {
+      "name": "Тифлинг",
+      "nameEn": "Tiefling",
+      "size": "Medium",
+      "speed": 30,
+      "abilityBonus": { "CHA": 2, "INT": 1 },
+      "darkvision": 60,
+      "features": ["Адская устойчивость", "Адское наследие"],
+      "description": "Отмеченные инфернальным происхождением",
+      "source": "Player's Handbook"
+    },
+    "Aarakocra": {
+      "name": "Ааракокра",
+      "nameEn": "Aarakocra",
+      "size": "Medium",
+      "speed": 25,
+      "abilityBonus": { "DEX": 2, "WIS": 1 },
+      "darkvision": 0,
+      "features": ["Когти (1d4)", "Полёт"],
+      "description": "Птицеподобные существа с крыльями",
+      "source": "Elemental Evil"
+    },
+    "Tabaxi": {
+      "name": "Табахси",
+      "nameEn": "Tabaxi",
+      "size": "Medium",
+      "speed": 30,
+      "abilityBonus": { "DEX": 2, "CHA": 1 },
+      "darkvision": 0,
+      "features": ["Кошачья ловкость (двойная скорость)", "Кошачьи когти (1d4)"],
+      "description": "Кошачьи гуманоиды, любящие исследования",
+      "source": "Volo's Guide"
+    },
+    "Goblin": {
+      "name": "Гоблин",
+      "nameEn": "Goblin",
+      "size": "Small",
+      "speed": 30,
+      "abilityBonus": { "DEX": 2, "CON": 1 },
+      "darkvision": 60,
+      "features": ["Ловкое бегство (уход/скрытие бонусным действием)"],
+      "description": "Малые, хитрые существа с острым умом",
+      "source": "Volo's Guide"
+    },
+    "Bugbear": {
+      "name": "Багбир",
+      "nameEn": "Bugbear",
+      "size": "Medium",
+      "speed": 30,
+      "abilityBonus": { "STR": 2, "DEX": 1 },
+      "darkvision": 60,
+      "features": ["Мощное телосложение", "Неожиданная атака (1d8 доп. урона)"],
+      "description": "Огромные и свирепые воины",
+      "source": "Volo's Guide"
+    },
+    "Orc": {
+      "name": "Орк",
+      "nameEn": "Orc",
+      "size": "Medium",
+      "speed": 30,
+      "abilityBonus": { "STR": 2, "CON": 1, "INT": -2 },
+      "darkvision": 60,
+      "features": ["Агрессия", "Мощное телосложение"],
+      "description": "Воинственные и физически сильные",
+      "source": "Volo's Guide"
+    }
+  },
+  "traits": {
+    "Damphir": {
+      "name": "Дампир",
+      "nameEn": "Damphir",
+      "type": "Supernatural",
+      "abilityBonus": { "CHA": 1, "DEX": 1 },
+      "features": ["Вампиричная устойчивость", "Острые клыки (1d4 пронзающего урона)"],
+      "description": "Наполовину вампир, наполовину смертный",
+      "canCombineWith": ["Human", "Elf", "Half-Elf", "Tiefling"]
+    },
+    "Warforged": {
+      "name": "Автоматон",
+      "nameEn": "Warforged",
+      "type": "Construct",
+      "abilityBonus": { "CON": 1 },
+      "features": ["Встроенная броня (АС +1)", "Не нужна еда/вода"],
+      "description": "Магический конструкт, созданный для войны",
+      "canCombineWith": "All"
+    },
+    "Changeling": {
+      "name": "Оборотень",
+      "nameEn": "Changeling",
+      "type": "Shapeshifter",
+      "abilityBonus": { "CHA": 1, "DEX": 1 },
+      "features": ["Смена облика", "Адаптация к местности"],
+      "description": "Может менять свой облик",
+      "canCombineWith": "All"
+    },
+    "Kalashtar": {
+      "name": "Посвящённый",
+      "nameEn": "Kalashtar",
+      "type": "Supernatural",
+      "abilityBonus": { "WIS": 1, "INT": 1 },
+      "features": ["Двойной ум", "Психическая устойчивость"],
+      "description": "Связан с внепланарным духом",
+      "canCombineWith": ["Human", "Elf", "Tiefling"]
+    },
+    "Shifter": {
+      "name": "Шейпер",
+      "nameEn": "Shifter",
+      "type": "Physical",
+      "abilityBonus": { "DEX": 1, "WIS": 1 },
+      "features": ["Трансформация животного", "Звериные инстинкты"],
+      "description": "Способен преобразоваться в животное",
+      "canCombineWith": "All"
+    },
+    "Eladrin": {
+      "name": "Свободный",
+      "nameEn": "Eladrin",
+      "type": "Fey",
+      "abilityBonus": { "INT": 1, "DEX": 1 },
+      "features": ["Фейское телепортирование", "Сезонная магия"],
+      "description": "Фейское существо со связью к временам года",
+      "canCombineWith": ["Elf", "Half-Elf"]
+    }
   },
   "classes": {
-    "Barbarian": {"name": "Barbarian", "hitDice": 12, "primaryAbility": "STR", "savingThrows": ["STR", "CON"], "features": ["Rage", "Unarmored Defense"]},
-    "Bard": {"name": "Bard", "hitDice": 8, "primaryAbility": "CHA", "savingThrows": ["CHA", "DEX"], "features": ["Spellcasting", "Bardic Inspiration"]},
-    "Cleric": {"name": "Cleric", "hitDice": 8, "primaryAbility": "WIS", "savingThrows": ["WIS", "CHA"], "features": ["Spellcasting", "Channel Divinity"]},
-    "Druid": {"name": "Druid", "hitDice": 8, "primaryAbility": "WIS", "savingThrows": ["INT", "WIS"], "features": ["Spellcasting", "Wildshape"]},
-    "Fighter": {"name": "Fighter", "hitDice": 10, "primaryAbility": "STR", "savingThrows": ["STR", "CON"], "features": ["Fighting Style", "Second Wind"]},
-    "Monk": {"name": "Monk", "hitDice": 8, "primaryAbility": "DEX", "savingThrows": ["STR", "DEX"], "features": ["Martial Arts", "Ki"]},
-    "Paladin": {"name": "Paladin", "hitDice": 10, "primaryAbility": "STR", "savingThrows": ["WIS", "CHA"], "features": ["Spellcasting", "Divine Smite"]},
-    "Ranger": {"name": "Ranger", "hitDice": 10, "primaryAbility": "DEX", "savingThrows": ["STR", "DEX"], "features": ["Spellcasting", "Favored Enemy"]},
-    "Rogue": {"name": "Rogue", "hitDice": 8, "primaryAbility": "DEX", "savingThrows": ["DEX", "INT"], "features": ["Expertise", "Sneak Attack"]},
-    "Sorcerer": {"name": "Sorcerer", "hitDice": 6, "primaryAbility": "CHA", "savingThrows": ["CHA", "CON"], "features": ["Spellcasting", "Sorcerous Origin"]},
-    "Warlock": {"name": "Warlock", "hitDice": 8, "primaryAbility": "CHA", "savingThrows": ["WIS", "CHA"], "features": ["Spellcasting", "Eldritch Invocations"]},
-    "Wizard": {"name": "Wizard", "hitDice": 6, "primaryAbility": "INT", "savingThrows": ["INT", "WIS"], "features": ["Spellcasting", "Spellbook"]}
+    "Barbarian": {
+      "name": "Варвар",
+      "nameEn": "Barbarian",
+      "hitDice": 12,
+      "primaryAbility": "STR",
+      "savingThrows": ["STR", "CON"],
+      "abilityBonus": { "STR": 1 },
+      "features": ["Боевой транс", "Необузданная защита"],
+      "sourceBook": "Player's Handbook"
+    },
+    "Bard": {
+      "name": "Бард",
+      "nameEn": "Bard",
+      "hitDice": 8,
+      "primaryAbility": "CHA",
+      "savingThrows": ["CHA", "DEX"],
+      "abilityBonus": { "CHA": 1 },
+      "features": ["Чарование", "Вдохновение барда"],
+      "sourceBook": "Player's Handbook"
+    },
+    "Cleric": {
+      "name": "Жрец",
+      "nameEn": "Cleric",
+      "hitDice": 8,
+      "primaryAbility": "WIS",
+      "savingThrows": ["WIS", "CHA"],
+      "abilityBonus": { "WIS": 1 },
+      "features": ["Чарование", "Божественный канал"],
+      "sourceBook": "Player's Handbook"
+    },
+    "Druid": {
+      "name": "Друид",
+      "nameEn": "Druid",
+      "hitDice": 8,
+      "primaryAbility": "WIS",
+      "savingThrows": ["INT", "WIS"],
+      "abilityBonus": { "WIS": 1 },
+      "features": ["Чарование", "Дикая форма"],
+      "sourceBook": "Player's Handbook"
+    },
+    "Fighter": {
+      "name": "Боец",
+      "nameEn": "Fighter",
+      "hitDice": 10,
+      "primaryAbility": "STR",
+      "savingThrows": ["STR", "CON"],
+      "abilityBonus": { "STR": 1 },
+      "features": ["Боевой стиль", "Второе дыхание"],
+      "sourceBook": "Player's Handbook"
+    },
+    "Monk": {
+      "name": "Монах",
+      "nameEn": "Monk",
+      "hitDice": 8,
+      "primaryAbility": "DEX",
+      "savingThrows": ["STR", "DEX"],
+      "abilityBonus": { "DEX": 1 },
+      "features": ["Боевые искусства", "Ки"],
+      "sourceBook": "Player's Handbook"
+    },
+    "Paladin": {
+      "name": "Паладин",
+      "nameEn": "Paladin",
+      "hitDice": 10,
+      "primaryAbility": "STR",
+      "savingThrows": ["WIS", "CHA"],
+      "abilityBonus": { "STR": 1 },
+      "features": ["Чарование", "Божественный удар"],
+      "sourceBook": "Player's Handbook"
+    },
+    "Ranger": {
+      "name": "Рейнджер",
+      "nameEn": "Ranger",
+      "hitDice": 10,
+      "primaryAbility": "DEX",
+      "savingThrows": ["STR", "DEX"],
+      "abilityBonus": { "DEX": 1 },
+      "features": ["Чарование", "Избранный враг"],
+      "sourceBook": "Player's Handbook"
+    },
+    "Rogue": {
+      "name": "Плут",
+      "nameEn": "Rogue",
+      "hitDice": 8,
+      "primaryAbility": "DEX",
+      "savingThrows": ["DEX", "INT"],
+      "abilityBonus": { "DEX": 1 },
+      "features": ["Мастерство", "Скрытая атака"],
+      "sourceBook": "Player's Handbook"
+    },
+    "Sorcerer": {
+      "name": "Чародей",
+      "nameEn": "Sorcerer",
+      "hitDice": 6,
+      "primaryAbility": "CHA",
+      "savingThrows": ["CHA", "CON"],
+      "abilityBonus": { "CHA": 1 },
+      "features": ["Чарование", "Волшебное происхождение"],
+      "sourceBook": "Player's Handbook"
+    },
+    "Warlock": {
+      "name": "Колдун",
+      "nameEn": "Warlock",
+      "hitDice": 8,
+      "primaryAbility": "CHA",
+      "savingThrows": ["WIS", "CHA"],
+      "abilityBonus": { "CHA": 1 },
+      "features": ["Чарование", "Чарования"],
+      "sourceBook": "Player's Handbook"
+    },
+    "Wizard": {
+      "name": "Волшебник",
+      "nameEn": "Wizard",
+      "hitDice": 6,
+      "primaryAbility": "INT",
+      "savingThrows": ["INT", "WIS"],
+      "abilityBonus": { "INT": 1 },
+      "features": ["Чарование", "Гримуар"],
+      "sourceBook": "Player's Handbook"
+    }
+  },
+  "backgrounds": {
+    "Acolyte": {
+      "name": "Послушник",
+      "nameEn": "Acolyte",
+      "description": "Служил богам и их храмам",
+      "skillProficiencies": ["Insight", "Religion"],
+      "personalityTraits": ["Я верю в силу моей веры", "Я ищу справедливости"],
+      "ideals": "Благо, Вера, Общество",
+      "bonds": "Я буду защищать храм",
+      "flaws": "Я слишком доверчив к служителям"
+    },
+    "Soldier": {
+      "name": "Воин",
+      "nameEn": "Soldier",
+      "description": "Боевой опыт в войнах и сражениях",
+      "skillProficiencies": ["Athletics", "Intimidation"],
+      "personalityTraits": ["Я дисциплинирован", "Я люблю стратегию"],
+      "ideals": "Честь, Долг, Лидерство",
+      "bonds": "Мои товарищи - моя семья",
+      "flaws": "Я вспоминаю ужасы войны"
+    },
+    "Merchant": {
+      "name": "Торговец",
+      "nameEn": "Merchant",
+      "description": "Опыт в торговле и ведении дел",
+      "skillProficiencies": ["Insight", "Persuasion"],
+      "personalityTraits": ["Я расчётлив", "Я люблю деньги"],
+      "ideals": "Богатство, Свобода, Общество",
+      "bonds": "Я обязан моему гильдию",
+      "flaws": "Я слишком алчен"
+    },
+    "Hermit": {
+      "name": "Отшельник",
+      "nameEn": "Hermit",
+      "description": "Жил вдали от общества, ища истину",
+      "skillProficiencies": ["Medicine", "Religion"],
+      "personalityTraits": ["Я ищу истину", "Я медитирую"],
+      "ideals": "Просветление, Самопознание, Природа",
+      "bonds": "Я обязан мудрецу",
+      "flaws": "Я не доверяю людям"
+    },
+    "Criminal": {
+      "name": "Преступник",
+      "nameEn": "Criminal",
+      "description": "Опыт в преступлении и уличной жизни",
+      "skillProficiencies": ["Deception", "Stealth"],
+      "personalityTraits": ["Я хитёр", "Я люблю свободу"],
+      "ideals": "Свобода, Выживание, Мщение",
+      "bonds": "Я обязан преступной организации",
+      "flaws": "Я слишком дерзок"
+    },
+    "Noble": {
+      "name": "Дворянин",
+      "nameEn": "Noble",
+      "description": "Рождён в богатстве и власти",
+      "skillProficiencies": ["Deception", "Insight"],
+      "personalityTraits": ["Я высокомерен", "Я люблю роскошь"],
+      "ideals": "Честь, Власть, Справедливость",
+      "bonds": "Я верен своей семье",
+      "flaws": "Я презираю простолюдинов"
+    }
+  },
+  "abilities": {
+    "STR": { "name": "Сила", "short": "СИЛ", "description": "Физическая мощь" },
+    "DEX": { "name": "Ловкость", "short": "ЛОВ", "description": "Координация и быстрота" },
+    "CON": { "name": "Телосложение", "short": "ТЕЛ", "description": "Здоровье и выносливость" },
+    "INT": { "name": "Интеллект", "short": "ИНТ", "description": "Разум и логика" },
+    "WIS": { "name": "Мудрость", "short": "МУД", "description": "Интуиция и восприятие" },
+    "CHA": { "name": "Харизма", "short": "ХАР", "description": "Личность и убеждение" }
+  },
+  "abilityScoringMethods": {
+    "StandardArray": {
+      "name": "Стандартный набор",
+      "description": "Используйте: 15, 14, 13, 12, 10, 8",
+      "scores": [15, 14, 13, 12, 10, 8],
+      "canRearrange": true
+    },
+    "PointBuy": {
+      "name": "Покупка очков",
+      "description": "27 очков для распределения (8-15 за способность)",
+      "points": 27,
+      "min": 8,
+      "max": 15,
+      "costs": { "8": 0, "9": 1, "10": 2, "11": 3, "12": 4, "13": 5, "14": 7, "15": 9 }
+    },
+    "Random": {
+      "name": "Случайный",
+      "description": "4d6 (отбросить наименьший) - классический метод",
+      "method": "4d6-drop-lowest"
+    },
+    "Fixed": {
+      "name": "Быстрый старт",
+      "description": "Все способности = 10 + модификаторы расы/класса",
+      "base": 10,
+      "calculateFromModifiers": true
+    }
   }
 }
