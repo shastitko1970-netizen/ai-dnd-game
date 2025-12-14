@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { CharacterService } from '../services/CharacterService.js';
 import { RulesEngine } from '../services/RulesEngine.js';
 import { CustomContentManager } from '../services/CustomContentManager.js';
+import { LocalizationService } from '../services/LocalizationService.js';
 
 export async function characterRoutes(fastify: FastifyInstance) {
   fastify.post('/create', async (request: any, reply) => {
@@ -15,7 +16,10 @@ export async function characterRoutes(fastify: FastifyInstance) {
       const characterService = new CharacterService(rulesEngine);
       const character = characterService.createCharacter(request.body, mergedRules);
 
-      reply.status(201).send({ success: true, data: character });
+      // Localize character data before sending to frontend
+      const localizedCharacter = LocalizationService.localizeCharacter(character);
+
+      reply.status(201).send({ success: true, data: localizedCharacter });
     } catch (error: any) {
       console.error('Character creation error:', error);
       reply.status(400).send({ success: false, error: error.message });
