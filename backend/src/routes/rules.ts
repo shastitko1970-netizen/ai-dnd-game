@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { RulesEngine } from '../services/RulesEngine.js';
 import { CustomContentManager } from '../services/CustomContentManager.js';
+import { LocalizationService } from '../services/LocalizationService.js';
 
 export async function rulesRoutes(fastify: FastifyInstance) {
   const customContentManager = new CustomContentManager();
@@ -15,7 +16,7 @@ export async function rulesRoutes(fastify: FastifyInstance) {
     return rulesEngine;
   };
 
-  // Get all races
+  // Get all races with localization
   fastify.get('/races', async (request, reply) => {
     try {
       const engine = await initializeRulesEngine();
@@ -23,13 +24,17 @@ export async function rulesRoutes(fastify: FastifyInstance) {
       const mergedEngine = new RulesEngine(customContent);
       await mergedEngine.loadCoreRules();
       const races = mergedEngine.getAllRaces();
-      reply.send({ success: true, data: races });
+      
+      // Localize races to Russian
+      const localizedRaces = LocalizationService.localizeRaces(races);
+      
+      reply.send({ success: true, data: localizedRaces });
     } catch (error: any) {
       reply.status(500).send({ success: false, error: error.message });
     }
   });
 
-  // Get all classes
+  // Get all classes with localization
   fastify.get('/classes', async (request, reply) => {
     try {
       const engine = await initializeRulesEngine();
@@ -37,7 +42,11 @@ export async function rulesRoutes(fastify: FastifyInstance) {
       const mergedEngine = new RulesEngine(customContent);
       await mergedEngine.loadCoreRules();
       const classes = mergedEngine.getAllClasses();
-      reply.send({ success: true, data: classes });
+      
+      // Localize classes to Russian
+      const localizedClasses = LocalizationService.localizeClasses(classes);
+      
+      reply.send({ success: true, data: localizedClasses });
     } catch (error: any) {
       reply.status(500).send({ success: false, error: error.message });
     }
