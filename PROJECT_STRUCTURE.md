@@ -1,276 +1,243 @@
-# AI D&D Game - Complete Project Structure
+# AI D&D Игра - Полная Структура Проекта
 
-## Overview
+## Обзор
 
-This is a **production-ready, full-stack D&D 5e game** with:
-- **Frontend**: Next.js 14 with React 18, Zustand, Tailwind CSS
-- **Backend**: Fastify with TypeScript, OpenAI integration
-- **Database**: JSON-based (MVP), expandable to MongoDB
-- **Architecture**: Service-oriented with strict separation of concerns
+Это **production-ready, full-stack D&D 5e игра** с:
+- **Фронтенд**: Next.js 14 с React 18, Zustand, Tailwind CSS
+- **Бэкенд**: Fastify с TypeScript, OpenAI интеграция
+- **База данных**: JSON-based (MVP), расширяется на MongoDB
+- **Архитектура**: Service-oriented с строгим разделением ответственности
 
-## Directory Tree
+## Дерево Директорий
 
 ```
 ai-dnd-game/
-├── README.md                  # Project overview
-├── QUICKSTART.md              # Fast setup guide
-├── INSTALLATION.md            # Detailed installation
-├── DEVELOPMENT.md             # Dev guide with examples
-├── API.md                     # Complete API documentation
-├── PROJECT_STRUCTURE.md       # This file
-├── .env.example               # Environment template
-├── .gitignore                 # Git ignore rules
-├── package.json               # Root workspace config
-├── tsconfig.json              # Root TypeScript config
+├── README.md                  # Обзор проекта
+├── QUICKSTART.md              # Быстрый гайд установки
+├── INSTALLATION.md            # Подробная установка
+├── DEVELOPMENT.md             # Гайд разработки с примерами
+├── API.md                     # Полная документация API
+├── PROJECT_STRUCTURE.md       # Этот файл
+├── .env.example               # Шаблон окружения
+├── .gitignore                 # Git игнор правила
+├── package.json               # Root конфиг воркспейса
+├── tsconfig.json              # Root TypeScript конфиг
 ├──
-├── backend/                   # 🔳 Fastify API Server
-├│  ├── .env.example             # Backend env template
-├│  ├── .gitignore               # Backend gitignore
-├│  ├── package.json             # Dependencies
-├│  ├── tsconfig.json             # TypeScript config
-├│  ├──
-├│  ├── src/
-├│  ├│  ├── main.ts                 # Server entry point
-├│  ├│  ├── routes/                 # 📚 API endpoints
-├│  ├│  ├│  ├── rules.ts               # GET core/merged rules
-├│  ├│  ├│  ├── character.ts           # POST create character
-├│  ├│  ├│  ├── custom-races.ts        # CRUD custom races
-├│  ├│  ├│  ├── custom-classes.ts      # CRUD custom classes
-├│  ├│  ├│  ├── custom-feats.ts        # CRUD custom feats
-├│  ├│  ├│  ├── game.ts                # Game sessions
-├│  ├│  ├│  └── ai.ts                  # AI DM endpoints (future)
-├│  ├│  ├──
-├│  ├│  ├── services/               # ⚡ Business Logic
-├│  ├│  ├│  ├── RulesEngine.ts         # Core D&D rules + merging
-├│  ├│  ├│  ├── CustomContentManager.ts # CRUD + validation
-├│  ├│  ├│  ├── GameManager.ts         # Session management
-├│  ├│  ├│  ├── CharacterService.ts    # Character creation
-├│  ├│  ├│  ├── CombatEngine.ts        # Combat system (future)
-├│  ├│  ├│  ├── AIService.ts           # OpenAI integration
-├│  ├│  ├│  └── StorageService.ts      # Data persistence
-├│  ├│  ├──
-├│  ├│  ├── types/                  # 💫 TypeScript Interfaces
-├│  ├│  ├│  ├── index.ts               # All type exports
-├│  ├│  ├│  └── Character.ts, etc.     # Domain types
-├│  ├│  ├──
-├│  ├│  ├── utils/                  # 🔰 Utilities
-├│  ├│  ├│  ├── dice.ts                # Dice rolling functions
-├│  ├│  ├│  ├── calculations.ts        # Ability modifiers, AC, HP
-├│  ├│  ├│  ├── validation.ts          # Content validation
-├│  ├│  ├│  ├── logger.ts              # Logging utilities
-├│  ├│  ├│  └── dnd-rules-loader.ts   # Load JSON rules
-├│  ├│  ├──
-├│  ├│  ├── middleware/             # 💨 Middlewares
-├│  ├│  ├│  ├── auth.ts                # Request validation
-├│  ├│  ├│  ├── errorHandler.ts        # Error handling
-├│  ├│  ├│  └── cors.ts                # CORS configuration
-├│  ├│  ├──
-├│  ├│  ├── data/                   # 📑 Game Data
-├│  ├│  ├│  ├── dnd-5e-rules.json      # Core D&D rules
-├│  ├│  ├│  ├── custom-content.json    # User-created content
-├│  ├│  ├│  └── custom-content-template.json
-├│  ├│  ├──
-├│  ├└── dist/                   # Compiled output (generated)
-├│
-├── frontend/                  # 🌟 Next.js App
-├│  ├── .env.local.example       # Frontend env template
-├│  ├── .gitignore               # Frontend gitignore
-├│  ├── package.json             # Dependencies
-├│  ├── tsconfig.json            # TypeScript config
-├│  ├── next.config.js           # Next.js config
-├│  ├── tailwind.config.ts       # Tailwind CSS config
-├│  ├── postcss.config.js        # PostCSS config
-├│  ├──
-├│  ├── app/                     # 📚 Pages & Layouts
-├│  ├│  ├── layout.tsx              # Root layout
-├│  ├│  ├── page.tsx                # Home page
-├│  ├│  ├── globals.css             # Global styles
-├│  ├│  ├──
-├│  ├│  ├── world-select/           # World selection
-├│  ├│  ├│  └── page.tsx
-├│  ├│  ├──
-├│  ├│  ├── character-create/       # 3-step character wizard
-├│  ├│  ├│  ├── page.tsx               # Main wizard
-├│  ├│  ├│  ├── step1-basic.tsx        # Name & gender
-├│  ├│  ├│  ├── step2-attributes.tsx   # Race, class, feats
-├│  ├│  ├│  └── step3-confirm.tsx      # Review & create
-├│  ├│  ├──
-├│  ├│  ├── game/                   # 🎲 Game Session
-├│  ├│  ├│  ├── page.tsx               # Main game loop
-├│  ├│  ├│  ├── chat.tsx               # Game chat
-├│  ├│  ├│  ├── character-sheet.tsx    # Character display
-├│  ├│  ├│  ├── combat.tsx             # Combat interface
-├│  ├│  ├│  └── spell-list.tsx         # Spell management
-├│  ├│  ├──
-├│  ├│  ├── custom-content/         # 📄 Custom Content Hub
-├│  ├│  ├│  ├── page.tsx               # Content hub
-├│  ├│  ├│  ├──
-├│  ├│  ├│  ├── races/                 # Custom races management
-├│  ├│  ├│  ├│  ├── page.tsx               # List races
-├│  ├│  ├│  ├│  ├── create/                # Create new race
-├│  ├│  ├│  ├│  └── [name]/                # Edit specific race
-├│  ├│  ├│  ├──
-├│  ├│  ├│  ├── classes/               # Custom classes management
-├│  ├│  ├│  ├│  ├── page.tsx
-├│  ├│  ├│  ├│  └── create/
-├│  ├│  ├│  ├──
-├│  ├│  ├│  ├── feats/                 # Custom feats management
-├│  ├│  ├│  ├│  ├── page.tsx
-├│  ├│  ├│  ├│  └── create/
-├│  ├│  ├│  └── [type]/[name]/edit/    # Edit custom content
-├│  ├│  ├──
-├│  ├── components/             # ⚡ React Components
-├│  ├│  ├── GameChat.tsx            # Chat interface
-├│  ├│  ├── CharacterStats.tsx      # Character display
-├│  ├│  ├── CombatPanel.tsx         # Combat interface
-├│  ├│  ├── ActionButtons.tsx       # Action buttons
-├│  ├│  ├── WorldCard.tsx           # World display
-├│  ├│  ├── CustomRaceForm.tsx      # Race form
-├│  ├│  ├── CustomClassForm.tsx     # Class form
-├│  ├│  ├── CustomFeatForm.tsx      # Feat form
-├│  ├│  ├── RulesPreview.tsx        # Rules preview
-├│  ├│  └── SettingsPanel.tsx       # Settings
-├│  ├──
-├│  ├── lib/                     # 📦 Utilities & Services
-├│  ├│  ├── api.ts                 # API client (axios wrapper)
-├│  ├│  ├── types.ts               # Shared TypeScript types
-├│  ├│  ├── store.ts               # Zustand store
-├│  ├│  ├── validation.ts          # Input validation
-├│  ├│  ├── customContent.ts       # Custom content logic
-├│  ├│  ├── dnd-rules-client.ts    # Client-side rules
-├│  ├│  └── utils.ts               # Helper functions
-├│  ├──
-├│  ├── public/                 # 📄 Static Assets
-├│  ├│  ├── dnd-5e-rules.json       # Core D&D rules (immutable)
-├│  ├│  └── favicon.ico
-├│  ├──
-├│  ├── data/                   # 📄 Game Data (frontend)
-├│  ├│  └── worlds.json             # Predefined game worlds
-├│  ├──
-├└── .next/                  # Next.js build output (generated)
+├── backend/                   # 🔌 Fastify API Сервер
+├── │ ├── .env.example         # Шаблон бэкенд окружения
+├── │ ├── .gitignore           # Бэкенд gitignore
+├── │ ├── package.json         # Зависимости
+├── │ ├── tsconfig.json        # TypeScript конфиг
+├── │ └──
+├── │ ├── src/
+├── │ ├── │ ├── main.ts        # Точка входа сервера
+├── │ ├── │ ├── routes/        # 📚 API endpoints
+├── │ ├── │ ├── │ ├── rules.ts
+├── │ ├── │ ├── │ ├── character.ts
+├── │ ├── │ ├── │ ├── custom-races.ts
+├── │ ├── │ ├── │ ├── custom-classes.ts
+├── │ ├── │ ├── │ ├── custom-feats.ts
+├── │ ├── │ ├── │ ├── game.ts
+├── │ ├── │ ├── │ └── ai.ts
+├── │ ├── │ ├──
+├── │ ├── │ ├── services/      # ⚡ Бизнес-логика
+├── │ ├── │ ├── │ ├── RulesEngine.ts
+├── │ ├── │ ├── │ ├── CustomContentManager.ts
+├── │ ├── │ ├── │ ├── GameManager.ts
+├── │ ├── │ ├── │ ├── CharacterService.ts
+├── │ ├── │ ├── │ ├── CombatEngine.ts
+├── │ ├── │ ├── │ ├── AIService.ts
+├── │ ├── │ ├── │ └── StorageService.ts
+├── │ ├── │ ├──
+├── │ ├── │ ├── types/         # 💬 TypeScript Интерфейсы
+├── │ ├── │ ├── │ ├── index.ts
+├── │ ├── │ ├── │ └── Character.ts, etc.
+├── │ ├── │ ├──
+├── │ ├── │ ├── utils/         # 🔧 Утилиты
+├── │ ├── │ ├── │ ├── dice.ts
+├── │ ├── │ ├── │ ├── calculations.ts
+├── │ ├── │ ├── │ ├── validation.ts
+├── │ ├── │ ├── │ └── logger.ts
+├── │ ├── │ ├──
+├── │ ├── │ ├── middleware/    # 👨 Middlewares
+├── │ ├── │ ├── │ ├── auth.ts
+├── │ ├── │ ├── │ ├── errorHandler.ts
+├── │ ├── │ ├── │ └── cors.ts
+├── │ ├── │ ├──
+├── │ ├── │ └── data/          # 📋 Игровые Данные
+├── │ ├── │     ├── dnd-5e-rules.json
+├── │ ├── │     └── custom-content.json
+├── │ └──
+├── │ └── dist/                # Скомпилированный вывод
+├──
+├── frontend/                  # 🌟 Next.js Приложение
+├── │ ├── .env.local.example   # Шаблон фронтенд окружения
+├── │ ├── .gitignore           # Фронтенд gitignore
+├── │ ├── package.json         # Зависимости
+├── │ ├── tsconfig.json        # TypeScript конфиг
+├── │ ├── next.config.js       # Next.js конфиг
+├── │ ├── tailwind.config.ts   # Tailwind CSS конфиг
+├── │ ├── postcss.config.js    # PostCSS конфиг
+├── │ ├──
+├── │ ├── app/                 # 📖 Страницы & Макеты
+├── │ ├── │ ├── layout.tsx      # Root макет
+├── │ ├── │ ├── page.tsx        # Главная страница
+├── │ ├── │ ├── globals.css     # Глобальные стили
+├── │ ├── │ ├──
+├── │ ├── │ ├── world-select/   # Выбор мира
+├── │ ├── │ ├── character-create/ # 3-шаговый мастер
+├── │ ├── │ ├── game/           # 🎲 Игровая сессия
+├── │ ├── │ └── custom-content/ # 📄 Хаб кастомного контента
+├── │ ├──
+├── │ ├── components/          # ⚡ React Компоненты
+├── │ ├── │ ├── GameChat.tsx
+├── │ ├── │ ├── CharacterStats.tsx
+├── │ ├── │ ├── CombatPanel.tsx
+├── │ ├── │ ├── ActionButtons.tsx
+├── │ ├── │ ├── WorldCard.tsx
+├── │ ├── │ ├── CustomRaceForm.tsx
+├── │ ├── │ ├── CustomClassForm.tsx
+├── │ ├── │ ├── CustomFeatForm.tsx
+├── │ ├── │ ├── RulesPreview.tsx
+├── │ ├── │ └── SettingsPanel.tsx
+├── │ ├──
+├── │ ├── lib/                 # 📦 Утилиты & Сервисы
+├── │ ├── │ ├── api.ts         # API клиент
+├── │ ├── │ ├── types.ts       # Общие TypeScript типы
+├── │ ├── │ ├── store.ts       # Zustand хранилище
+├── │ ├── │ ├── validation.ts  # Валидация входа
+├── │ ├── │ ├── customContent.ts
+├── │ ├── │ ├── dnd-rules-client.ts
+├── │ ├── │ └── utils.ts       # Помощники
+├── │ ├──
+├── │ ├── public/              # 📄 Статические Ассеты
+├── │ ├── │ ├── dnd-5e-rules.json
+├── │ ├── │ └── favicon.ico
+├── │ ├──
+├── │ └── .next/               # Next.js вывод сборки
 ```
 
-## Key Files
+## Ключевые Файлы
 
-### Backend Core Files
+### Бэкенд Основные Файлы
 
-1. **main.ts** - Fastify server initialization, route registration
-2. **RulesEngine.ts** - Core D&D 5e rules interpreter and merging logic
-3. **CustomContentManager.ts** - CRUD and validation for custom content
-4. **GameManager.ts** - Game session management
-5. **CharacterService.ts** - Character creation and calculation
+1. **main.ts** - Инициализация Fastify сервера, регистрация маршрутов
+2. **RulesEngine.ts** - Интерпретатор основных правил D&D 5e и логика мерджинга
+3. **CustomContentManager.ts** - CRUD и валидация для пользовательского контента
+4. **GameManager.ts** - Управление игровыми сессиями
+5. **CharacterService.ts** - Создание персонажей и расчёты
 
-### Frontend Core Files
+### Фронтенд Основные Файлы
 
-1. **store.ts** - Zustand state management
-2. **api.ts** - Axios API client wrapper
-3. **layout.tsx** - Root layout with navigation
-4. **page.tsx** (game/page.tsx) - Main game loop
-5. **character-create/page.tsx** - 3-step character wizard
+1. **store.ts** - Zustand управление состоянием
+2. **api.ts** - Axios API клиент wrapper
+3. **layout.tsx** - Root макет с навигацией
+4. **page.tsx** (game/page.tsx) - Основной игровой цикл
+5. **character-create/page.tsx** - 3-шаговый мастер создания персонажа
 
-## Data Flow
+## Поток Данных
 
-### Character Creation Flow
+### Поток Создания Персонажа
 
 ```
-Frontend (character-create) 
+Фронтенд (character-create) 
   ↓ POST /api/character/create
-Backend (routes/character.ts)
+Бэкенд (routes/character.ts)
   ↓ CharacterService.createCharacter()
 RulesEngine.getMergedRules()
-  ↓ Core + Custom races/classes
-Character object created
-  ↓ Stored in session
-Frontend receives character
+  ↓ Основные + Кастомные расы/классы
+Объект персонажа создан
+  ↓ Сохранён в сессию
+Фронтенд получает персонажа
 ```
 
-### Custom Content Flow
+### Поток Пользовательского Контента
 
 ```
-Frontend (custom-content/races/create)
+Фронтенд (custom-content/races/create)
   ↓ POST /api/custom-races
-Backend (routes/custom-races.ts)
+Бэкенд (routes/custom-races.ts)
   ↓ CustomContentManager.createRace()
-Validation (race name, speed, bonuses)
-  ↓ Saved to custom-content.json
-Frontend receives success
-  ↓ Redirect to list
+Валидация (имя расы, скорость, бонусы)
+  ↓ Сохранено в custom-content.json
+Фронтенд получает успех
+  ↓ Редирект на список
 
-When game starts:
-RulesEngine loads core + custom
-  ↓ Merge races, classes, feats
-  ↓ Character creation shows both
+Когда игра начинается:
+RulesEngine загружает основные + кастомные
+  ↓ Мержит расы, классы, особенности
+  ↓ Создатель персонажа показывает оба
 ```
 
-### Game Session Flow
+### Поток Игровой Сессии
 
 ```
-Frontend (game/page.tsx)
+Фронтенд (game/page.tsx)
   ↓ GET /api/game/session/:sessionId
 GameManager.getSession()
-  ↓ Display narrative and options
+  ↓ Показывает нарратив и опции
 
-Player takes action (attack, dodge, etc)
+Игрок берёт действие (атаку, уклон, и т.д.)
   ↓ POST /api/game/action
 GameManager.processAction()
-  ↓ RulesEngine resolves action
-  ↓ AI generates narrative
-Frontend updates UI
-  ↓ Next turn
+  ↓ RulesEngine разрешает действие
+  ↓ AI генерирует нарратив
+Фронтенд обновляет UI
+  ↓ Следующий ход
 ```
 
-## Technology Stack Summary
+## Технологический Стек Резюме
 
-### Frontend
-- **Next.js 14**: App Router, SSR, API routes (unused here)
-- **React 18**: Latest features, hooks
-- **TypeScript**: Full type safety
-- **Zustand**: Lightweight state management
-- **Tailwind CSS**: Utility-first styling
-- **Axios**: HTTP client
+### Фронтенд
+- **Next.js 14**: App Router, SSR
+- **React 18**: Последние возможности, хуки
+- **TypeScript**: Полная безопасность типов
+- **Zustand**: Лёгкое управление состоянием
+- **Tailwind CSS**: Полезный-first стилей
+- **Axios**: HTTP клиент
 
-### Backend
-- **Fastify**: High-performance HTTP server
-- **TypeScript**: Full type safety
-- **OpenAI API**: GPT-4 integration (setup ready)
-- **Node.js**: Runtime
-- **JSON**: MVP storage (extendable)
+### Бэкенд
+- **Fastify**: Высокопроизводительный HTTP сервер
+- **TypeScript**: Полная безопасность типов
+- **OpenAI API**: GPT-4 интеграция (готов)
+- **Node.js**: Рантайм
+- **JSON**: MVP хранилище (расширяется)
 
-### Development Tools
-- **npm/pnpm**: Package management
-- **TypeScript**: Compile & check
-- **Git**: Version control
-- **ESM**: Modern module system
+### Инструменты Разработки
+- **npm/pnpm**: Управление пакетами
+- **TypeScript**: Компиляция & проверка
+- **Git**: Контроль версий
+- **ESM**: Современная модульная система
 
-## Production Considerations
+## Рассмотрение Production
 
-### Deployment
-- Backend: Deploy to Node.js hosting (Render, Railway, Heroku)
-- Frontend: Deploy to Vercel, Netlify, or similar
-- Database: Migrate to MongoDB or PostgreSQL
-- AI: Set up OpenAI API key management
+### Развёртывание
+- Бэкенд: Развёртывание на Node.js хостинг (Render, Railway, Heroku)
+- Фронтенд: Развёртывание на Vercel, Netlify или подобном
+- База данных: Миграция на MongoDB или PostgreSQL
+- AI: Настройка управления ключом OpenAI API
 
-### Performance
-- Implement caching for merged rules
-- Clean up old game sessions
-- Add request queuing for AI API
-- Consider CDN for static assets
+### Производительность
+- Реализуйте кеширование для мёржа правил
+- Очистите старые игровые сессии
+- Добавьте очереди запросов для AI API
+- Рассмотрите CDN для статических ассетов
 
-### Security
-- Add authentication system
-- Validate all inputs
-- Rate limiting
-- CORS configuration
-- Environment variable management
+### Безопасность
+- Добавьте систему аутентификации
+- Валидируйте все входы
+- Ограничение частоты запросов
+- Конфигурация CORS
+- Управление переменными окружения
 
-## Quick Navigation
+## Быстрая Навигация
 
-- **API Docs**: See [API.md](API.md)
-- **Installation**: See [INSTALLATION.md](INSTALLATION.md)
-- **Quick Start**: See [QUICKSTART.md](QUICKSTART.md)
-- **Development**: See [DEVELOPMENT.md](DEVELOPMENT.md)
-- **Main README**: See [README.md](README.md)
+- **API Документация**: Смотри [API.md](API.md)
+- **Установка**: Смотри [INSTALLATION.md](INSTALLATION.md)
+- **Быстрый Старт**: Смотри [QUICKSTART.md](QUICKSTART.md)
+- **Разработка**: Смотри [DEVELOPMENT.md](DEVELOPMENT.md)
+- **Главное README**: Смотри [README.md](README.md)
 
 ---
 
-**Status**: Production Ready | **Last Updated**: 2025-12-13
+**Статус**: Production Ready | **Последнее обновление**: 2025-12-14
