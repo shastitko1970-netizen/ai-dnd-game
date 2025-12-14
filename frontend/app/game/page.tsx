@@ -30,6 +30,14 @@ interface GameResponse {
 
 type AccordionSection = 'abilities' | 'skills' | 'personality' | 'world' | 'session' | null;
 
+const ACTION_TYPE_NAMES: Record<string, string> = {
+  combat: 'Бой',
+  skill_check: 'Проверка навыка',
+  dialogue: 'Диалог',
+  exploration: 'Осколеждение',
+  freeform: 'Свободное',
+};
+
 export default function GamePage() {
   const router = useRouter();
   const [character, setCharacter] = useState<any>(null);
@@ -97,12 +105,12 @@ export default function GamePage() {
 
       setSessionId(data.data.sessionId);
       setNarrative(data.data.narrative);
-      setCurrentActions([]);
+      setCurrentActions(data.data.nextActions || []);
       setGameStarted(true);
       setTurn(0);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'unknown error';
-      setError(`Error: ${errorMsg}`);
+      setError(`Ошибка: ${errorMsg}`);
       console.error('Game start error:', err);
     } finally {
       setIsLoading(false);
@@ -111,7 +119,7 @@ export default function GamePage() {
 
   const handleAction = async (action: string) => {
     if (isLoading || !character || !sessionId) {
-      if (!sessionId) setError('No active session');
+      if (!sessionId) setError('Нет активной сессии');
       return;
     }
 
@@ -151,8 +159,14 @@ export default function GamePage() {
       let diceInfo = '';
       if (gameData.diceRoll) {
         const { roll, modifier, total, success, criticalHit, criticalMiss } = gameData.diceRoll;
-        const resultText = criticalHit ? 'CRIT!' : criticalMiss ? 'FAIL!' : success ? 'Success' : 'Failure';
-        diceInfo = `\nRoll: d20[${roll}] + ${modifier} = ${total} [${resultText}]`;
+        const resultText = criticalHit
+          ? 'КНИТ!'
+          : criticalMiss
+            ? 'ПРОВАЛ!'
+            : success
+              ? 'Успех'
+              : 'Неудача';
+        diceInfo = `\n\n🎲 Кидок: к20[${roll}] + ${modifier} = ${total} [${resultText}]`;
       }
 
       const fullNarrative = narrative + playerLine + diceInfo + gmLine;
@@ -161,7 +175,7 @@ export default function GamePage() {
       setUserInput('');
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'unknown error';
-      setError(`Error: ${errorMsg}`);
+      setError(`Ошибка: ${errorMsg}`);
     } finally {
       setIsLoading(false);
     }
@@ -175,7 +189,7 @@ export default function GamePage() {
   if (!character || !gameStarted) {
     return (
       <div className="text-center py-12 text-slate-300">
-        <p>Loading...</p>
+        <p>Загружаю...</p>
         {error && <p className="text-red-400 mt-2 text-sm">{error}</p>}
       </div>
     );
@@ -183,12 +197,12 @@ export default function GamePage() {
 
   const getAbilityMod = (score: number) => Math.floor((score - 10) / 2);
   const abilityNames = {
-    STR: 'Strength',
-    DEX: 'Dexterity',
-    CON: 'Constitution',
-    INT: 'Intelligence',
-    WIS: 'Wisdom',
-    CHA: 'Charisma',
+    STR: 'Сила',
+    DEX: 'Ловкость',
+    CON: 'Выносливость',
+    INT: 'Интеллект',
+    WIS: 'Мудрость',
+    CHA: 'Харизма',
   };
 
   const toggleAccordion = (section: AccordionSection) => {
@@ -202,27 +216,29 @@ export default function GamePage() {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
             <div className="text-center">
-              <p className="text-slate-400 text-xs">NAME</p>
+              <p className="text-slate-400 text-xs">ИМЕНА</p>
               <p className="text-teal-300 font-bold">{character.name}</p>
             </div>
             <div className="text-center">
-              <p className="text-slate-400 text-xs">HP</p>
+              <p className="text-slate-400 text-xs">ГП</p>
               <p className="text-red-300 font-bold">
                 {character.hp?.current || 10}/{character.hp?.max || 10}
               </p>
             </div>
             <div className="text-center">
-              <p className="text-slate-400 text-xs">AC</p>
+              <p className="text-slate-400 text-xs">КО</p>
               <p className="text-blue-300 font-bold">{character.ac || 12}</p>
             </div>
             <div className="text-center">
-              <p className="text-slate-400 text-xs">TURN</p>
+              <p className="text-slate-400 text-xs">ХОД</p>
               <p className="text-yellow-300 font-bold">{turn}</p>
             </div>
             <div className="text-center hidden md:block">
-              <p className="text-slate-400 text-xs">STATUS</p>
-              <p className={`font-bold ${ isLoading ? 'text-orange-300' : 'text-green-300' }`}>
-                {isLoading ? 'Processing...' : 'Active'}
+              <p className="text-slate-400 text-xs">СТАТУС</p>
+              <p className={`font-bold ${
+                isLoading ? 'text-orange-300' : 'text-green-300'
+              }`}>
+                {isLoading ? 'Обработка...' : 'Активна'}
               </p>
             </div>
           </div>
@@ -242,7 +258,7 @@ export default function GamePage() {
 
             {/* Story Box */}
             <div className="card border border-slate-600 flex flex-col h-[500px]">
-              <h2 className="text-2xl font-bold text-teal-400 mb-4">Story</h2>
+              <h2 className="text-2xl font-bold text-teal-400 mb-4">Нарратив</h2>
               <div className="flex-1 overflow-y-auto text-slate-300 p-4 bg-slate-900 rounded whitespace-pre-wrap text-sm font-mono border border-slate-700">
                 {narrative}
                 <div ref={narrativeEndRef} />
@@ -255,26 +271,26 @@ export default function GamePage() {
                 <div className="grid grid-cols-3 gap-4 text-center">
                   <div>
                     <p className="text-2xl font-bold text-yellow-300">{lastDiceRoll.roll}</p>
-                    <p className="text-xs text-orange-200">d20</p>
+                    <p className="text-xs text-orange-200">к20</p>
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-yellow-300">+{lastDiceRoll.modifier}</p>
-                    <p className="text-xs text-orange-200">mod</p>
+                    <p className="text-xs text-orange-200">мод</p>
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-yellow-300">{lastDiceRoll.total}</p>
-                    <p className="text-xs text-orange-200">total</p>
+                    <p className="text-xs text-orange-200">итого</p>
                   </div>
                 </div>
                 <div className="mt-3 pt-3 border-t border-orange-700 text-center">
                   <p className="text-sm font-bold text-yellow-300">
                     {lastDiceRoll.criticalHit
-                      ? 'CRITICAL SUCCESS!'
+                      ? 'КРИТИЧЕСКИЙ УСПЕХ!'
                       : lastDiceRoll.criticalMiss
-                        ? 'CRITICAL FAILURE!'
+                        ? 'КРИТИЧЕСКАЯ ОШИБКА!'
                         : lastDiceRoll.success
-                          ? 'Success'
-                          : 'Failure'}
+                          ? 'Успех'
+                          : 'Неудача'}
                   </p>
                 </div>
               </div>
@@ -284,8 +300,10 @@ export default function GamePage() {
             {lastActionIntent && (
               <div className="card border border-slate-600 bg-slate-800">
                 <p className="text-sm text-slate-300">
-                  <strong>Action:</strong>{' '}
-                  <span className="text-teal-300">{lastActionIntent.type}</span>
+                  <strong>Новое действие:</strong>{' '}
+                  <span className="text-teal-300">
+                    {ACTION_TYPE_NAMES[lastActionIntent.type] || lastActionIntent.type}
+                  </span>
                   {lastActionIntent.skill && (
                     <span className="text-slate-400"> - {lastActionIntent.skill}</span>
                   )}
@@ -295,23 +313,27 @@ export default function GamePage() {
 
             {/* Actions */}
             <div className="card border border-slate-600">
-              <p className="text-slate-300 mb-4 font-semibold">Choose action:</p>
-              <div className="flex gap-2 flex-wrap mb-4">
-                {currentActions.map((action, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => handleAction(action)}
-                    disabled={isLoading}
-                    className="px-4 py-2 rounded bg-teal-600 hover:bg-teal-500 text-white font-semibold disabled:opacity-50 text-sm transition-colors whitespace-nowrap"
-                  >
-                    {action}
-                  </button>
-                ))}
-              </div>
+              {currentActions && currentActions.length > 0 ? (
+                <>
+                  <p className="text-slate-300 mb-4 font-semibold">Как ты поступишь?</p>
+                  <div className="flex gap-2 flex-wrap mb-4">
+                    {currentActions.map((action, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => handleAction(action)}
+                        disabled={isLoading}
+                        className="px-4 py-2 rounded bg-teal-600 hover:bg-teal-500 text-white font-semibold disabled:opacity-50 text-sm transition-colors whitespace-nowrap"
+                      >
+                        {action}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : null}
 
               <div className="space-y-2">
                 <label className="block text-slate-300 text-sm font-semibold">
-                  Custom action:
+                  Описание действия:
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -319,7 +341,7 @@ export default function GamePage() {
                     value={userInput}
                     onChange={(e) => setUserInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleCustomAction()}
-                    placeholder="Enter your action..."
+                    placeholder="Кто им я? Что я делаю?"
                     disabled={isLoading}
                     className="flex-1 px-3 py-2 rounded bg-slate-800 border border-slate-600 text-slate-200 placeholder-slate-500 disabled:opacity-50 text-sm focus:border-teal-500 focus:outline-none"
                   />
@@ -328,7 +350,7 @@ export default function GamePage() {
                     disabled={isLoading || !userInput.trim()}
                     className="px-4 py-2 rounded bg-teal-600 hover:bg-teal-500 text-white font-semibold disabled:opacity-50 whitespace-nowrap transition-colors"
                   >
-                    OK
+                    ГО!
                   </button>
                 </div>
               </div>
@@ -343,7 +365,7 @@ export default function GamePage() {
                 onClick={() => toggleAccordion('abilities')}
                 className="w-full flex justify-between items-center p-4 hover:bg-slate-800 rounded transition"
               >
-                <h3 className="text-lg font-bold text-teal-400">Abilities</h3>
+                <h3 className="text-lg font-bold text-teal-400">Умения</h3>
                 <span className="text-teal-400 text-xl">
                   {openAccordion === 'abilities' ? '▲' : '▼'}
                 </span>
@@ -378,7 +400,7 @@ export default function GamePage() {
                 onClick={() => toggleAccordion('skills')}
                 className="w-full flex justify-between items-center p-4 hover:bg-slate-800 rounded transition"
               >
-                <h4 className="font-bold text-teal-400">Skills</h4>
+                <h4 className="font-bold text-teal-400">Навыки</h4>
                 <span className="text-teal-400">{openAccordion === 'skills' ? '▲' : '▼'}</span>
               </button>
               {openAccordion === 'skills' && (
@@ -399,20 +421,20 @@ export default function GamePage() {
                 onClick={() => toggleAccordion('personality')}
                 className="w-full flex justify-between items-center p-4 hover:bg-slate-800 rounded transition"
               >
-                <h4 className="font-bold text-teal-400">Personality</h4>
+                <h4 className="font-bold text-teal-400">Личность</h4>
                 <span className="text-teal-400">{openAccordion === 'personality' ? '▲' : '▼'}</span>
               </button>
               {openAccordion === 'personality' && (
                 <div className="border-t border-slate-700 p-4 space-y-3 text-xs">
                   {character.background && (
                     <div>
-                      <p className="font-semibold text-teal-300 mb-1">Background:</p>
+                      <p className="font-semibold text-teal-300 mb-1">Основа персонажа:</p>
                       <p className="text-slate-400">{character.background}</p>
                     </div>
                   )}
                   {character.traits && character.traits.length > 0 && (
                     <div>
-                      <p className="font-semibold text-teal-300 mb-1">Traits:</p>
+                      <p className="font-semibold text-teal-300 mb-1">Особенности:</p>
                       <ul className="list-disc list-inside text-slate-400 space-y-1">
                         {character.traits.map((trait: string, i: number) => (
                           <li key={i}>{trait}</li>
@@ -422,7 +444,7 @@ export default function GamePage() {
                   )}
                   {character.backstory && (
                     <div>
-                      <p className="font-semibold text-teal-300 mb-1">Story:</p>
+                      <p className="font-semibold text-teal-300 mb-1">Предыстория:</p>
                       <p className="text-slate-400 line-clamp-4">{character.backstory}</p>
                     </div>
                   )}
@@ -436,7 +458,7 @@ export default function GamePage() {
                 onClick={() => toggleAccordion('world')}
                 className="w-full flex justify-between items-center p-4 hover:bg-slate-800 rounded transition"
               >
-                <h4 className="font-bold text-teal-400">World</h4>
+                <h4 className="font-bold text-teal-400">Мир</h4>
                 <span className="text-teal-400">{openAccordion === 'world' ? '▲' : '▼'}</span>
               </button>
               {openAccordion === 'world' && (
@@ -444,7 +466,7 @@ export default function GamePage() {
                   <p className="font-semibold text-teal-200 mb-2">{world?.name}</p>
                   <p className="text-slate-400 mb-2">{world?.description}</p>
                   <p className="text-xs text-slate-500">
-                    Difficulty: <strong>{world?.difficulty || 'Normal'}</strong>
+                    Сложность: <strong>{world?.difficulty || 'Нормальная'}</strong>
                   </p>
                 </div>
               )}
@@ -456,7 +478,7 @@ export default function GamePage() {
                 onClick={() => toggleAccordion('session')}
                 className="w-full flex justify-between items-center p-4 hover:bg-slate-800 rounded transition"
               >
-                <h4 className="font-bold text-teal-400">Session</h4>
+                <h4 className="font-bold text-teal-400">Сессия</h4>
                 <span className="text-teal-400">{openAccordion === 'session' ? '▲' : '▼'}</span>
               </button>
               {openAccordion === 'session' && (
@@ -465,10 +487,10 @@ export default function GamePage() {
                     <strong>ID:</strong> {sessionId.slice(0, 20)}...
                   </p>
                   <p>
-                    <strong>Turn:</strong> {turn}
+                    <strong>Ход:</strong> {turn}
                   </p>
                   <p>
-                    <strong>Status:</strong> {isLoading ? 'Processing...' : 'Active'}
+                    <strong>Статус:</strong> {isLoading ? 'Обработка...' : 'Активна'}
                   </p>
                 </div>
               )}
@@ -482,7 +504,7 @@ export default function GamePage() {
               }}
               className="w-full px-4 py-2 rounded bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold text-sm transition-colors"
             >
-              Return to worlds
+              Вернуться на основною
             </button>
           </div>
         </div>
