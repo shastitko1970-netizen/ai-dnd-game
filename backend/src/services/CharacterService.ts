@@ -18,17 +18,14 @@ export class CharacterService {
       return raceName;
     }
     
-    // Если не нашли, пробуем обратный перевод
-    const translations = LocalizationService.getAllRaceTranslations();
-    
-    // Ищем по значениям (русским)
-    for (const [english, russian] of Object.entries(translations)) {
-      if (russian === raceName) {
-        return english;
-      }
+    // Пробуем обратный перевод (русское/алиас -> английское)
+    const translated = LocalizationService.reverseTranslateRace(raceName);
+    if (translated !== raceName && mergedRules.races[translated]) {
+      console.log(`✅ Перевод: '${raceName}' -> '${translated}'`);
+      return translated;
     }
     
-    // Не нашли - возвращаем как есть
+    // Если перевод не помог, возвращаем оригинальное
     return raceName;
   }
 
@@ -42,12 +39,10 @@ export class CharacterService {
     }
     
     // Обратный перевод
-    const translations = LocalizationService.getAllClassTranslations();
-    
-    for (const [english, russian] of Object.entries(translations)) {
-      if (russian === className) {
-        return english;
-      }
+    const translated = LocalizationService.reverseTranslateClass(className);
+    if (translated !== className && mergedRules.classes[translated]) {
+      console.log(`✅ Перевод: '${className}' -> '${translated}'`);
+      return translated;
     }
     
     return className;
@@ -101,6 +96,7 @@ export class CharacterService {
       level: 1,
       race: originalRaceName,
       class: originalClassName,
+      background: data.background || 'Unknown', // Предыстория персонажа
       gender: data.gender || 'Other',
       abilities,
       skills: this.initializeSkills(),
