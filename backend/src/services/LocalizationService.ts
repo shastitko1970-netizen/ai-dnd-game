@@ -58,6 +58,47 @@ const raceTranslations: TranslationMap = {
   'Drow': 'Дроу',
   'Fey': 'Фейри',
   'Dragon': 'Дракон',
+  'Aarakocra': 'Ааракокра',
+  'Vampire': 'Вампир',
+  'Werewolf': 'Оборотень',
+};
+
+// Common aliases for user input flexibility
+const raceAliases: TranslationMap = {
+  'Гномик': 'Gnome',
+  'гномик': 'Gnome',
+  'гном': 'Gnome',
+  'Гном': 'Gnome',
+  'Гне': 'Gnome',
+  'Вампир': 'Vampire',
+  'вампир': 'Vampire',
+  'Оборотень': 'Werewolf',
+  'оборотень': 'Werewolf',
+  'Человечек': 'Halfling',
+  'человечек': 'Halfling',
+  'Полурослик': 'Halfling',
+  'полурослик': 'Halfling',
+  'Эльф': 'Elf',
+  'эльф': 'Elf',
+  'эльф': 'Elf',
+  'Эльф': 'Elf',
+  'Орк': 'Orc',
+  'орк': 'Orc',
+  'Дворф': 'Dwarf',
+  'дворф': 'Dwarf',
+  'Гоблин': 'Goblin',
+  'гоблин': 'Goblin',
+  'Тифлинг': 'Tiefling',
+  'тифлинг': 'Tiefling',
+  'Драконорожденный': 'Dragonborn',
+  'драконорожденный': 'Dragonborn',
+  'Полуэльф': 'Half-Elf',
+  'полуэльф': 'Half-Elf',
+  'Полуорк': 'Half-Orc',
+  'полуорк': 'Half-Orc',
+  'Человек': 'Human',
+  'человек': 'Human',
+  'Убер': 'Orc',
 };
 
 const classTranslations: TranslationMap = {
@@ -80,6 +121,34 @@ const classTranslations: TranslationMap = {
   'Blood Hunter': 'Охотник Крови',
   'Mystic': 'Мистик',
   'Revised Ranger': 'Пересмотренный Рейнджер',
+};
+
+// Common aliases for class input
+const classAliases: TranslationMap = {
+  'Варвар': 'Barbarian',
+  'варвар': 'Barbarian',
+  'Бард': 'Bard',
+  'бард': 'Bard',
+  'Клирик': 'Cleric',
+  'клирик': 'Cleric',
+  'Друид': 'Druid',
+  'друид': 'Druid',
+  'Боец': 'Fighter',
+  'боец': 'Fighter',
+  'Монах': 'Monk',
+  'монах': 'Monk',
+  'Паладин': 'Paladin',
+  'паладин': 'Paladin',
+  'Рейнджер': 'Ranger',
+  'рейнджер': 'Ranger',
+  'Плут': 'Rogue',
+  'плут': 'Rogue',
+  'Чародей': 'Sorcerer',
+  'чародей': 'Sorcerer',
+  'Волшебник': 'Warlock',
+  'волшебник': 'Warlock',
+  'Маг': 'Wizard',
+  'маг': 'Wizard',
 };
 
 const abilityTranslations: TranslationMap = {
@@ -127,10 +196,50 @@ export class LocalizationService {
   }
 
   /**
+   * Обратный перевод: русское имя расы → английское
+   * Проверяет алиасы, потом обратный перевод
+   */
+  static reverseTranslateRace(raceName: string): string {
+    // Сначала проверяем алиасы
+    if (raceAliases[raceName]) {
+      return raceAliases[raceName];
+    }
+
+    // Потом ищем в словаре переводов (обратная проверка)
+    for (const [english, russian] of Object.entries(raceTranslations)) {
+      if (russian === raceName || russian.toLowerCase() === raceName.toLowerCase()) {
+        return english;
+      }
+    }
+
+    // Если ничего не нашли, возвращаем как есть
+    return raceName;
+  }
+
+  /**
    * Переводит название класса на русский
    */
   static translateClass(className: string): string {
     return classTranslations[className] || className;
+  }
+
+  /**
+   * Обратный перевод: русское имя класса → английское
+   */
+  static reverseTranslateClass(className: string): string {
+    // Сначала проверяем алиасы
+    if (classAliases[className]) {
+      return classAliases[className];
+    }
+
+    // Потом ищем в словаре переводов
+    for (const [english, russian] of Object.entries(classTranslations)) {
+      if (russian === className || russian.toLowerCase() === className.toLowerCase()) {
+        return english;
+      }
+    }
+
+    return className;
   }
 
   /**
