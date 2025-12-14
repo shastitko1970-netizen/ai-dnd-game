@@ -42,7 +42,7 @@ function initializeClient(): void {
       console.log(`🔐 Proxy configured: ${proxyUrl.replace(/:[^/]*@/, ':***@')}`);
       
       try {
-        const proxyAgent = proxyUrl.startsWith('http://') 
+        const proxyAgent = proxyUrl.startsWith('http://')
           ? new http.Agent({ timeout: REQUEST_TIMEOUT })
           : new https.Agent({ timeout: REQUEST_TIMEOUT });
         
@@ -96,7 +96,7 @@ export class AIService {
 
     const systemPrompt = PromptService.getSystemPrompt(character, world, context, language);
     const userPrompt = language === 'ru'
-      ? `НАЧИНИ НОВОЕ ПРИКЛЮЧЕНИЕ. Первое ощущение ${character.name} в ${world.name}.`
+      ? `НАЧНИ НОВОЕ ПРИКЛЮЧЕНИЕ. Первое ощущение ${character.name} в ${world.name}.`
       : `START A NEW ADVENTURE. First moment ${character.name} awakens in ${world.name}.`;
 
     try {
@@ -154,7 +154,7 @@ export class AIService {
         .replace(/```json|```|`/g, '')
         .trim();
 
-      console.log('📊 Анализ действия: OK');
+      console.log('🔍 Анализ действия: OK');
       return cleaned;
     } catch (error: any) {
       console.error('❌ Ошибка анализа:', error.message);
@@ -208,6 +208,7 @@ export class AIService {
 
   /**
    * Generate next action options for player
+   * IMPROVED: Better JSON parsing, ensures array is always returned
    */
   static async generateNextActions(
     character: Character,
@@ -215,18 +216,36 @@ export class AIService {
     context: GameContext,
     language: 'ru' | 'en' = 'ru'
   ): Promise<string[]> {
-    const fallbackActionsRU = ['Атаковать', 'Осмотреть', 'Поговорить', 'Отступить'];
-    const fallbackActionsEN = ['Attack', 'Examine', 'Talk', 'Retreat'];
+    const fallbackActionsRU = ['Приближиться', 'Осмотреть ближе', 'Послушать звуки', 'Реагировать'];
+    const fallbackActionsEN = ['Approach', 'Look closer', 'Listen', 'React'];
     const fallbackActions = language === 'ru' ? fallbackActionsRU : fallbackActionsEN;
 
     if (!aiEnabled || !client) {
+      console.log('🔐 AI не доступна, использую фалбек');
       return fallbackActions;
     }
 
-    const systemPrompt = PromptService.getSystemPrompt(character, world, context, language);
+    const systemPrompt = language === 'ru'
+      ? `Генератор действий для D&D. Верни ТОЛЬКО JSON аррей с 3-4 действиями:
+["действие_1", "действие_2", "действие_3"]
+
+Действия:
+- Короткие (2-5 слов)
+- На русском
+- Активные глаголы
+- Контекстные для ситуации`
+      : `Generate 3-4 short action options in JSON array format:
+["action_1", "action_2", "action_3"]
+
+Requirements:
+- Short phrases (2-5 words)
+- Active verbs
+- Contextually relevant
+- Return ONLY the JSON array, nothing else`;
+
     const userPrompt = language === 'ru'
-      ? `Брось 3 коротких актиона JSON: ["действиеРусские", ...]`
-      : `Generate 3 short action options in JSON: ["action1", "action2", "action3"]`;
+      ? `${character.name} (${character.class}) в ${world.name}. Сocтояние: ${context.emotionalState || 'Ожидание'}.\n\nЧто ${character.name} может сделать дальше?`
+      : `${character.name} (${character.class}) in ${world.name}. State: ${context.emotionalState || 'Waiting'}.\n\nWhat can ${character.name} do next?`;
 
     try {
       const response = await client.messages.create({
@@ -242,25 +261,69 @@ export class AIService {
       });
 
       const content = response.content[0]?.type === 'text' ? response.content[0].text : '[]';
-      const cleanContent = content
-        .replace(/```json|```|`/g, '')
-        .replace(/[^\[\]"\w\u0410-\u044f\s,]/g, '')
-        .trim();
+      const actions = this.parseActionsJSON(content, language);
 
-      try {
-        const parsed = JSON.parse(cleanContent);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.slice(0, 4).map(a => String(a));
-        }
-      } catch (parseError) {
-        console.warn('⚠️  Не смог парсить JSON действий');
+      if (actions && actions.length > 0) {
+        console.log(`✅ Получено ${actions.length} действий от AI`);
+        return actions;
       }
 
+      console.log('⚠️  Не смог парсить действия AI, от фалбека');
       return fallbackActions;
     } catch (error: any) {
-      console.error('❌ AI ошибка:', error.message);
+      console.error('❌ Ошибка генерации действий:', error.message);
       return fallbackActions;
     }
+  }
+
+  /**
+   * Parse JSON actions with multiple strategies
+   */
+  private static parseActionsJSON(rawText: string, language: 'ru' | 'en'): string[] | null {
+    if (!rawText) return null;
+
+    // Strategy 1: Extract array from response
+    let cleanedText = rawText
+      .replace(/```json|```|`/g, '')
+      .trim();
+
+    // Strategy 2: Find JSON array pattern
+    const arrayMatch = cleanedText.match(/\[.*\]/s);
+    if (arrayMatch) {
+      try {
+        const parsed = JSON.parse(arrayMatch[0]);
+        if (Array.isArray(parsed)) {
+          return parsed
+            .map(item => String(item).trim())
+            .filter(item => item.length > 0 && item.length < 100);
+        }
+      } catch (e) {
+        // Continue to next strategy
+      }
+    }
+
+    // Strategy 3: Try parsing entire text as JSON
+    try {
+      const parsed = JSON.parse(cleanedText);
+      if (Array.isArray(parsed)) {
+        return parsed
+          .map(item => String(item).trim())
+          .filter(item => item.length > 0 && item.length < 100);
+      }
+    } catch (e) {
+      // Continue
+    }
+
+    // Strategy 4: Manual extraction from quoted strings
+    const quotedStrings = cleanedText.match(/["']([^"']*)["']/g) || [];
+    if (quotedStrings.length > 0) {
+      return quotedStrings
+        .map(s => s.replace(/["']/g, '').trim())
+        .filter(s => s.length > 0 && s.length < 100 && !s.startsWith('{'))
+        .slice(0, 4);
+    }
+
+    return null;
   }
 
   /**
@@ -277,12 +340,12 @@ export class AIService {
         .replace(/\b(Ок, |Ок\.|OK|okay)\b/gi, '')
         .replace(/извин|скорбя|\bне могу|\bне подлю|согласно|\bне рекоменду/gi, '')
         .replace(/[^\p{L}\p{N}\p{P}\p{Z}]/gu, (m) => {
-          return /[\u0430-\u044f\u0410-\u042f\u0401\u0451\s.,!?;:\-—«»()0-9]/u.test(m) ? m : '';
+          return /[\u0430-\u044f\u0410-\u042f\u0401\u0451\s.,!?;:\-\u2014«»()0-9]/u.test(m) ? m : '';
         });
     } else {
       cleaned = cleaned
         .replace(/[^\p{L}\p{N}\p{P}\p{Z}]/gu, (m) => {
-          return /[a-zA-Z0-9\s.,!?;:\-—"'()]/u.test(m) ? m : '';
+          return /[a-zA-Z0-9\s.,!?;:\-\u2014"'()]/u.test(m) ? m : '';
         });
     }
 
