@@ -5,6 +5,8 @@ const nextConfig = {
   typescript: {
     tsconfigPath: './tsconfig.json',
   },
+  compress: true,
+  poweredByHeader: false,
 };
 
 module.exports = nextConfig;
