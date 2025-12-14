@@ -13,6 +13,28 @@ interface Class {
   [key: string]: any;
 }
 
+const BACKGROUNDS = [
+  'Воин',
+  'Торговец',
+  'Отшельник',
+  'Разбойник',
+  'Маг',
+  'Священник',
+  'Природосферы',
+  'Лечец',
+  'Пират',
+  'Нобиль',
+];
+
+const TRAITS = [
+  'Вампир',
+  'Оборотень',
+  'Проклятый',
+  'Кантаро',
+  'Надаренный маг',
+  'Признанный преступник',
+];
+
 export default function CharacterCreate() {
   const router = useRouter();
   const [step, setStep] = useState(1);
@@ -22,7 +44,6 @@ export default function CharacterCreate() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
 
-  // Mode toggles for creating custom race/class
   const [useCustomRace, setUseCustomRace] = useState(false);
   const [useCustomClass, setUseCustomClass] = useState(false);
 
@@ -31,7 +52,9 @@ export default function CharacterCreate() {
     gender: 'Мужской',
     race: '',
     class: '',
-    feats: [] as string[]
+    background: '',
+    traits: [] as string[],
+    backstory: '',
   });
 
   const [customRace, setCustomRace] = useState({
@@ -39,7 +62,7 @@ export default function CharacterCreate() {
     size: 'Medium',
     speed: 30,
     abilityBonus: { STR: 0, DEX: 0, CON: 0, INT: 0, WIS: 0, CHA: 0 },
-    features: []
+    features: [],
   });
 
   const [customClass, setCustomClass] = useState({
@@ -47,7 +70,7 @@ export default function CharacterCreate() {
     hitDice: 8,
     primaryAbility: 'STR',
     savingThrows: [],
-    features: []
+    features: [],
   });
 
   useEffect(() => {
@@ -66,7 +89,7 @@ export default function CharacterCreate() {
 
       console.log(`🔄 Загружаю расы...`);
       const racesRes = await fetch(`${apiUrl}/api/rules/races`, {
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
       });
       console.log(`Ответ races:`, racesRes.status);
 
@@ -75,7 +98,7 @@ export default function CharacterCreate() {
       }
 
       const classesRes = await fetch(`${apiUrl}/api/rules/classes`, {
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
       });
       console.log(`Ответ classes:`, classesRes.status);
 
@@ -92,7 +115,7 @@ export default function CharacterCreate() {
       if (racesData.data && Array.isArray(racesData.data)) {
         setRacesList(racesData.data);
         if (racesData.data.length > 0) {
-          setFormData(prev => ({ ...prev, race: racesData.data[0].name }));
+          setFormData((prev) => ({ ...prev, race: racesData.data[0].name }));
         }
       } else {
         throw new Error('Неверные данные рас');
@@ -101,7 +124,7 @@ export default function CharacterCreate() {
       if (classesData.data && Array.isArray(classesData.data)) {
         setClassesList(classesData.data);
         if (classesData.data.length > 0) {
-          setFormData(prev => ({ ...prev, class: classesData.data[0].name }));
+          setFormData((prev) => ({ ...prev, class: classesData.data[0].name }));
         }
       } else {
         throw new Error('Неверные данные классов');
@@ -126,21 +149,19 @@ export default function CharacterCreate() {
       const response = await fetch(`${apiUrl}/api/custom-races`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(customRace)
+        body: JSON.stringify(customRace),
       });
 
       if (response.ok) {
-        const data = await response.json();
-        // Add to local list and select it
-        setRacesList(prev => [...prev, customRace]);
-        setFormData(prev => ({ ...prev, race: customRace.name }));
+        setRacesList((prev) => [...prev, customRace]);
+        setFormData((prev) => ({ ...prev, race: customRace.name }));
         setUseCustomRace(false);
         setCustomRace({
           name: '',
           size: 'Medium',
           speed: 30,
           abilityBonus: { STR: 0, DEX: 0, CON: 0, INT: 0, WIS: 0, CHA: 0 },
-          features: []
+          features: [],
         });
         alert('Раса создана!');
       } else {
@@ -165,21 +186,19 @@ export default function CharacterCreate() {
       const response = await fetch(`${apiUrl}/api/custom-classes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(customClass)
+        body: JSON.stringify(customClass),
       });
 
       if (response.ok) {
-        const data = await response.json();
-        // Add to local list and select it
-        setClassesList(prev => [...prev, customClass]);
-        setFormData(prev => ({ ...prev, class: customClass.name }));
+        setClassesList((prev) => [...prev, customClass]);
+        setFormData((prev) => ({ ...prev, class: customClass.name }));
         setUseCustomClass(false);
         setCustomClass({
           name: '',
           hitDice: 8,
           primaryAbility: 'STR',
           savingThrows: [],
-          features: []
+          features: [],
         });
         alert('Класс создан!');
       } else {
@@ -192,8 +211,17 @@ export default function CharacterCreate() {
     }
   };
 
+  const handleTraitToggle = (trait: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      traits: prev.traits.includes(trait)
+        ? prev.traits.filter((t) => t !== trait)
+        : [...prev.traits, trait],
+    }));
+  };
+
   const handleNext = () => {
-    if (step < 3) setStep(step + 1);
+    if (step < 4) setStep(step + 1);
   };
 
   const handleBack = () => {
@@ -220,7 +248,7 @@ export default function CharacterCreate() {
       const response = await fetch(`${apiUrl}/api/character/create`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(formData),
       });
 
       if (!response.ok) {
@@ -242,11 +270,18 @@ export default function CharacterCreate() {
       <div className="max-w-2xl mx-auto px-4 py-12">
         <div className="card">
           <h2 className="text-3xl font-bold text-teal-400 mb-6">Создай персонажа</h2>
-          <p className="text-slate-300 mb-4"><span className="inline-block animate-spin mr-2">⛳</span>Загружаю расы и классы...</p>
+          <p className="text-slate-300 mb-4">
+            <span className="inline-block animate-spin mr-2">⚳️</span>
+            Загружаю расы и классы...
+          </p>
           {error && (
             <div className="bg-red-900 border border-red-600 text-red-200 px-4 py-3 rounded">
-              <p><strong>Загружка не удалась:</strong> {error}</p>
-              <p className="text-sm mt-2">Проверь, что backend запущен на localhost:3001</p>
+              <p>
+                <strong>Загружка не удалась:</strong> {error}
+              </p>
+              <p className="text-sm mt-2">
+                Проверь, что backend запустен на localhost:3001
+              </p>
             </div>
           )}
         </div>
@@ -257,8 +292,8 @@ export default function CharacterCreate() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-12">
       <div className="card">
-        <h2 className="text-3xl font-bold text-teal-400 mb-6">Создай персонажа</h2>
-        <p className="text-slate-300 mb-6">Шаг {step} из 3</p>
+        <h2 className="text-3xl font-bold text-teal-400 mb-2">Создай персонажа</h2>
+        <p className="text-slate-300 mb-6">Шаг {step} из 4</p>
 
         {error && (
           <div className="bg-red-900 border border-red-600 text-red-200 px-4 py-3 rounded mb-6">
@@ -266,6 +301,7 @@ export default function CharacterCreate() {
           </div>
         )}
 
+        {/* Step 1: Name & Gender */}
         {step === 1 && (
           <div className="space-y-4">
             <div>
@@ -293,9 +329,9 @@ export default function CharacterCreate() {
           </div>
         )}
 
+        {/* Step 2: Race & Class */}
         {step === 2 && (
           <div className="space-y-6">
-            {/* Раса */}
             <div>
               <label className="block text-slate-300 mb-2 font-semibold">Раса ({racesList.length})</label>
               {!useCustomRace ? (
@@ -306,7 +342,7 @@ export default function CharacterCreate() {
                     className="w-full bg-slate-800 border border-slate-600 rounded px-3 py-2 text-white focus:border-teal-400 focus:outline-none mb-2"
                   >
                     <option value="">-- Выбери расу --</option>
-                    {racesList.map(race => (
+                    {racesList.map((race) => (
                       <option key={race.name} value={race.name}>
                         {race.name}
                       </option>
@@ -347,16 +383,10 @@ export default function CharacterCreate() {
                     />
                   </div>
                   <div className="flex gap-2">
-                    <button
-                      onClick={handleCreateCustomRace}
-                      className="flex-1 btn btn-primary btn-sm"
-                    >
+                    <button onClick={handleCreateCustomRace} className="flex-1 btn btn-primary btn-sm">
                       Сохранить
                     </button>
-                    <button
-                      onClick={() => setUseCustomRace(false)}
-                      className="flex-1 btn btn-secondary btn-sm"
-                    >
+                    <button onClick={() => setUseCustomRace(false)} className="flex-1 btn btn-secondary btn-sm">
                       Отмена
                     </button>
                   </div>
@@ -364,7 +394,6 @@ export default function CharacterCreate() {
               )}
             </div>
 
-            {/* Класс */}
             <div>
               <label className="block text-slate-300 mb-2 font-semibold">Класс ({classesList.length})</label>
               {!useCustomClass ? (
@@ -375,7 +404,7 @@ export default function CharacterCreate() {
                     className="w-full bg-slate-800 border border-slate-600 rounded px-3 py-2 text-white focus:border-teal-400 focus:outline-none mb-2"
                   >
                     <option value="">-- Выбери класс --</option>
-                    {classesList.map(clazz => (
+                    {classesList.map((clazz) => (
                       <option key={clazz.name} value={clazz.name}>
                         {clazz.name}
                       </option>
@@ -419,16 +448,10 @@ export default function CharacterCreate() {
                     </select>
                   </div>
                   <div className="flex gap-2">
-                    <button
-                      onClick={handleCreateCustomClass}
-                      className="flex-1 btn btn-primary btn-sm"
-                    >
+                    <button onClick={handleCreateCustomClass} className="flex-1 btn btn-primary btn-sm">
                       Сохранить
                     </button>
-                    <button
-                      onClick={() => setUseCustomClass(false)}
-                      className="flex-1 btn btn-secondary btn-sm"
-                    >
+                    <button onClick={() => setUseCustomClass(false)} className="flex-1 btn btn-secondary btn-sm">
                       Отмена
                     </button>
                   </div>
@@ -438,28 +461,94 @@ export default function CharacterCreate() {
           </div>
         )}
 
+        {/* Step 3: Background & Traits */}
         {step === 3 && (
-          <div className="card bg-slate-800">
-            <h3 className="text-xl font-bold text-teal-400 mb-4">Проверь персонажа</h3>
-            <div className="space-y-2 text-slate-300">
-              <p><strong>Имя:</strong> {formData.name}</p>
-              <p><strong>Пол:</strong> {formData.gender}</p>
-              <p><strong>Раса:</strong> {formData.race}</p>
-              <p><strong>Класс:</strong> {formData.class}</p>
+          <div className="space-y-6">
+            <div>
+              <label className="block text-slate-300 mb-2 font-semibold">История персонажа</label>
+              <select
+                value={formData.background}
+                onChange={(e) => setFormData({ ...formData, background: e.target.value })}
+                className="w-full bg-slate-800 border border-slate-600 rounded px-3 py-2 text-white focus:border-teal-400 focus:outline-none"
+              >
+                <option value="">— Выбери историю —</option>
+                {BACKGROUNDS.map((bg) => (
+                  <option key={bg} value={bg}>
+                    {bg}
+                  </option>
+                ))}
+              </select>
             </div>
-            <p className="text-slate-300 mt-6 text-sm">Готов начать приключение?</p>
+
+            <div>
+              <label className="block text-slate-300 mb-3 font-semibold">Особенности и черты</label>
+              <div className="grid grid-cols-2 gap-2">
+                {TRAITS.map((trait) => (
+                  <label key={trait} className="flex items-center p-3 bg-slate-800 border border-slate-700 rounded cursor-pointer hover:border-teal-500 transition">
+                    <input
+                      type="checkbox"
+                      checked={formData.traits.includes(trait)}
+                      onChange={() => handleTraitToggle(trait)}
+                      className="w-4 h-4 accent-teal-400"
+                    />
+                    <span className="ml-2 text-slate-300 text-sm">{trait}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Step 4: Backstory & Review */}
+        {step === 4 && (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-slate-300 mb-2 font-semibold">Предыстория (Опционально)</label>
+              <textarea
+                value={formData.backstory}
+                onChange={(e) => setFormData({ ...formData, backstory: e.target.value })}
+                placeholder="Расскажи историю твоего персонажа. Откуда он? Какие его мечты?"
+                className="w-full bg-slate-800 border border-slate-600 rounded px-3 py-2 text-white placeholder-slate-400 focus:border-teal-400 focus:outline-none h-32 resize-none"
+              />
+              <p className="text-xs text-slate-400 mt-2">{formData.backstory.length}/500 символов</p>
+            </div>
+
+            {/* Review */}
+            <div className="card bg-slate-800 border border-slate-600 mt-6">
+              <h3 className="text-lg font-bold text-teal-400 mb-4">Проверь персонажа</h3>
+              <div className="space-y-2 text-slate-300 text-sm">
+                <p>
+                  <strong>Имя:</strong> {formData.name}
+                </p>
+                <p>
+                  <strong>Пол:</strong> {formData.gender}
+                </p>
+                <p>
+                  <strong>Раса:</strong> {formData.race}
+                </p>
+                <p>
+                  <strong>Класс:</strong> {formData.class}
+                </p>
+                <p>
+                  <strong>История:</strong> {formData.background || 'Не выбрана'}
+                </p>
+                {formData.traits.length > 0 && (
+                  <p>
+                    <strong>Особенности:</strong> {formData.traits.join(', ')}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <p className="text-slate-300 text-sm mt-4">Готов начать приключение?</p>
           </div>
         )}
 
         <div className="flex gap-4 mt-8">
-          <button
-            onClick={handleBack}
-            className="btn btn-secondary flex-1"
-            disabled={step === 1}
-          >
+          <button onClick={handleBack} className="btn btn-secondary flex-1" disabled={step === 1}>
             Назад
           </button>
-          {step < 3 ? (
+          {step < 4 ? (
             <button onClick={handleNext} className="btn btn-primary flex-1">
               Дальше
             </button>
