@@ -1,75 +1,75 @@
-# AI Dungeon Master - D&D 5e Game
+# AI Мастер Подземелья - D&D 5e Игра
 
-A production-ready, full-stack AI-powered D&D 5e game built with **Next.js 14**, **Fastify**, and **OpenAI GPT-4** as the Dungeon Master.
+Полностью готовая к production использованию, full-stack D&D 5e игра с AI Мастером Подземелья, построенная на **Next.js 14**, **Fastify**, и **OpenAI GPT-4**.
 
-## Features
+## Особенности
 
-✅ **Full D&D 5e Rules Engine** - Complete character creation with races, classes, feats  
-✅ **AI Dungeon Master** - GPT-4 generates dynamic narratives and encounters  
-✅ **Custom Content System** - Create custom races, classes, and feats  
-✅ **Real Combat System** - Initiative, attacks, spells, damage rolls  
-✅ **Character Sheets** - Detailed ability scores, skills, proficiencies  
-✅ **Production Ready** - TypeScript everywhere, full validation, error handling  
+✅ **Полная система правил D&D 5e** - Создание персонажей со всеми расами, классами и особенностями  
+✅ **AI Мастер Подземелья** - GPT-4 создаёт динамические сюжеты и встречи  
+✅ **Система пользовательского контента** - Создавайте собственные расы, классы и особенности  
+✅ **Реальная боевая система** - Инициатива, атаки, заклинания, урон  
+✅ **Листы персонажей** - Подробные характеристики, навыки, владение оружием  
+✅ **Production-ready** - TypeScript везде, полная валидация, обработка ошибок  
 
-## Tech Stack
+## Технологический стек
 
-### Frontend
+### Фронтенд
 - **Next.js 14** (App Router)
 - **React 18** + TypeScript
-- **Tailwind CSS** for styling
-- **Zustand** for state management
+- **Tailwind CSS** для стилей
+- **Zustand** для управления состоянием
 
-### Backend
-- **Fastify** with TypeScript
-- **OpenAI API** (GPT-4) for AI DM
-- **JSON-based storage** (expandable to MongoDB)
+### Бэкенд
+- **Fastify** с TypeScript
+- **OpenAI API** (GPT-4) для AI DM
+- **JSON-based хранилище** (можно расширить на MongoDB)
 
-## Project Structure
+## Структура проекта
 
 ```
 ai-dnd-game/
-├── frontend/          # Next.js application
-│   ├── app/          # Pages and layouts
-│   ├── components/   # React components
-│   ├── lib/          # Utilities, store, API
-│   └── public/       # Static assets + dnd-5e-rules.json
-├── backend/          # Fastify server
+├── frontend/          # Next.js приложение
+│   ├── app/          # Страницы и макеты
+│   ├── components/   # React компоненты
+│   ├── lib/          # Утилиты, хранилище, API
+│   └── public/       # Статические файлы + dnd-5e-rules.json
+├── backend/          # Fastify сервер
 │   └── src/
 │       ├── routes/   # API endpoints
-│       ├── services/ # Business logic
-│       ├── types/    # TypeScript interfaces
-│       ├── utils/    # Helpers
-│       └── data/     # Core rules + custom content
-└── package.json      # Root workspace
+│       ├── services/ # Бизнес-логика
+│       ├── types/    # TypeScript интерфейсы
+│       ├── utils/    # Помощники
+│       └── data/     # Основные правила + пользовательский контент
+└── package.json      # Root конфигурация
 ```
 
-## Getting Started
+## Быстрый старт
 
-### Prerequisites
+### Требования
 - Node.js 18+
-- npm or yarn
-- OpenAI API key
+- npm или yarn
+- API ключ OpenAI
 
-### Installation
+### Установка
 
 ```bash
-# Clone and install
+# Клонирование и установка
 git clone https://github.com/shastitko1970-netizen/ai-dnd-game.git
 cd ai-dnd-game
 
-# Install root dependencies
+# Установка корневых зависимостей
 npm install
 
-# Install frontend
+# Установка фронтенда
 cd frontend && npm install && cd ..
 
-# Install backend
+# Установка бэкенда
 cd backend && npm install && cd ..
 ```
 
-### Configuration
+### Конфигурация
 
-Create `.env` files:
+Создай файлы `.env`:
 
 **frontend/.env.local**
 ```
@@ -79,83 +79,83 @@ NEXT_PUBLIC_ENVIRONMENT=development
 
 **backend/.env**
 ```
-OPENAI_API_KEY=sk-your-api-key-here
+OPENAI_API_KEY=sk-твой-ключ-здесь
 PORT=3001
 NODE_ENV=development
 ```
 
-### Running
+### Запуск
 
 ```bash
-# Terminal 1: Start backend
+# Терминал 1: Запуск бэкенда
 cd backend
 npm run dev
 
-# Terminal 2: Start frontend
+# Терминал 2: Запуск фронтенда
 cd frontend
 npm run dev
 
-# Open http://localhost:3000 in browser
+# Открой http://localhost:3000 в браузере
 ```
 
-## Game Flow
+## Поток игры
 
-1. **Landing Page** - Start your adventure
-2. **World Selection** - Choose a game world
-3. **Character Creation** - 3-step wizard (name, race/class, confirm)
-4. **Game Session** - Play with AI DM
-5. **Custom Content** - Create custom races, classes, feats
+1. **Главная страница** - Начни своё приключение
+2. **Выбор мира** - Выбери игровой мир
+3. **Создание персонажа** - 3-шаговый мастер (имя, раса/класс, подтверждение)
+4. **Игровая сессия** - Играй с AI DM
+5. **Пользовательский контент** - Создавай собственные расы, классы, особенности
 
-## Core Concepts
+## Основные концепции
 
 ### RulesEngine
-Merges **core D&D 5e rules** (immutable) with **custom content** (user-generated) to create a unified rules set for gameplay.
+Объединяет **основные правила D&D 5e** (неизменяемые) с **пользовательским контентом** (создаваемым пользователями) в единый набор правил для игры.
 
-### Custom Content System
-Players can create:
-- **Custom Races**: Ability bonuses, features, speed
-- **Custom Classes**: Hit dice, features per level
-- **Custom Feats**: Passive or active benefits
+### Система пользовательского контента
+Игроки могут создавать:
+- **Собственные расы**: Бонусы характеристик, особенности, скорость
+- **Собственные классы**: Кубики здоровья, особенности по уровням
+- **Собственные особенности**: Пассивные или активные преимущества
 
-All validated before saving, cannot modify official content.
+Всё валидируется перед сохранением, нельзя изменять официальный контент.
 
 ## API Endpoints
 
-### Rules
-- `GET /api/rules/core` - Official rules
-- `GET /api/rules/merged` - Core + custom
-- `GET /api/rules/spell/:name` - Specific spell
+### Правила
+- `GET /api/rules/core` - Официальные правила
+- `GET /api/rules/merged` - Основные + пользовательские
+- `GET /api/rules/spell/:name` - Конкретное заклинание
 
-### Character
-- `POST /api/character/create` - Create character
-- `GET /api/character/:id` - Get character
+### Персонаж
+- `POST /api/character/create` - Создать персонажа
+- `GET /api/character/:id` - Получить персонажа
 
-### Custom Content
-- `GET /api/custom-races` - List custom races
-- `POST /api/custom-races` - Create race
-- `PUT /api/custom-races/:name` - Update race
-- `DELETE /api/custom-races/:name` - Delete race
-- Same for `/custom-classes` and `/custom-feats`
+### Пользовательский контент
+- `GET /api/custom-races` - Список собственных рас
+- `POST /api/custom-races` - Создать расу
+- `PUT /api/custom-races/:name` - Обновить расу
+- `DELETE /api/custom-races/:name` - Удалить расу
+- То же для `/custom-classes` и `/custom-feats`
 
-### Game
-- `POST /api/game/start` - Start session
-- `POST /api/game/action` - Player action
-- `POST /api/game/combat/start` - Begin combat
-- `GET /api/game/session/:sessionId` - Get session
+### Игра
+- `POST /api/game/start` - Начать сессию
+- `POST /api/game/action` - Действие игрока
+- `POST /api/game/combat/start` - Начать боевой раунд
+- `GET /api/game/session/:sessionId` - Получить состояние сессии
 
-## Production Quality
+## Production-качество
 
 ✅ 100% TypeScript  
-✅ Full validation  
-✅ Complete error handling  
-✅ No placeholder code  
-✅ No TODOs  
-✅ Works immediately after `npm install`
+✅ Полная валидация  
+✅ Полная обработка ошибок  
+✅ Нет примеров кода  
+✅ Нет TODO  
+✅ Работает сразу после `npm install`
 
-## License
+## Лицензия
 
 MIT
 
 ---
 
-**Status**: Production Ready | **Last Updated**: 2025-12-13
+**Статус**: Готово к production | **Последнее обновление**: 2025-12-13
