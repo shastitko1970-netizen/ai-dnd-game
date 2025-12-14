@@ -3,8 +3,8 @@ import { GameManager } from '../services/GameManager.js';
 import { AIService } from '../services/AIService.js';
 
 export async function gameRoutes(server: FastifyInstance) {
-  // Начать граю сессию
-  server.post('/game/start', async (request: FastifyRequest, reply: FastifyReply) => {
+  // Начать игровую сессию
+  server.post('/start', async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const { character, world } = request.body as any;
 
@@ -30,13 +30,13 @@ export async function gameRoutes(server: FastifyInstance) {
       console.error('Game start ошибка:', error);
       return reply.status(500).send({
         success: false,
-        error: 'Ошибка начала гамы',
+        error: 'Ошибка начала игры',
       });
     }
   });
 
   // Обработать действие
-  server.post('/game/action', async (request: FastifyRequest, reply: FastifyReply) => {
+  server.post('/action', async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const { action, narrative, character, world, previousActions } = request.body as any;
 
@@ -63,7 +63,7 @@ export async function gameRoutes(server: FastifyInstance) {
       console.error('Game action ошибка:', error);
       return reply.status(500).send({
         success: false,
-        error: 'Ошибка состояния активности',
+        error: 'Ошибка обработки действия',
       });
     }
   });
