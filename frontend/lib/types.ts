@@ -1,10 +1,19 @@
+// Общие TypeScript типы для всего приложения
+
 export interface Character {
   id: string;
   name: string;
-  level: number;
+  gender: string;
   race: string;
   class: string;
-  gender: string;
+  level: number;
+  experience: number;
+  hp: {
+    current: number;
+    max: number;
+  };
+  ac: number;
+  initiative: number;
   abilities: {
     STR: number;
     DEX: number;
@@ -13,12 +22,9 @@ export interface Character {
     WIS: number;
     CHA: number;
   };
-  skills: { [key: string]: { proficient: boolean; bonus: number } };
+  skills: Record<string, number>;
   feats: string[];
-  armor: string;
-  hp: { current: number; max: number };
-  ac: number;
-  initiative: number;
+  equipment: string[];
 }
 
 export interface World {
@@ -27,4 +33,49 @@ export interface World {
   description: string;
   difficulty: 'Easy' | 'Medium' | 'Hard';
   playerCount: number;
+}
+
+export interface GameSession {
+  id: string;
+  character: Character;
+  world: World;
+  startedAt: string;
+  narrative: string;
+  actions: GameAction[];
+}
+
+export interface GameAction {
+  type: 'attack' | 'spell' | 'dodge' | 'disengage' | 'hide' | 'help';
+  target?: string;
+  result: string;
+  timestamp: string;
+}
+
+export interface CustomRace {
+  name: string;
+  description: string;
+  size: string;
+  speed: number;
+  abilityBonus: Record<string, number>;
+  features: string[];
+}
+
+export interface CustomClass {
+  name: string;
+  description: string;
+  hitDice: string;
+  features: Record<number, string[]>;
+}
+
+export interface CustomFeat {
+  name: string;
+  description: string;
+  passive: boolean;
+  bonus?: number;
+}
+
+export interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
 }

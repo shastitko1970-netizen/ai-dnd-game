@@ -1,44 +1,79 @@
-import axios from 'axios';
+// API клиент для всех бэкенд реквестов
+
+import axios, { AxiosInstance } from 'axios';
+import type { Character, GameSession, CustomRace, CustomClass, CustomFeat, ApiResponse } from './types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-const api = axios.create({
-  baseURL: API_URL,
+const api: AxiosInstance = axios.create({
+  baseURL: `${API_URL}/api`,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Rules
-export const fetchMergedRules = () => api.get('/api/rules/merged').then(r => r.data);
-export const fetchCoreRules = () => api.get('/api/rules/core').then(r => r.data);
+// Обработка ошибок
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error('API Ошибка:', error.response?.data || error.message);
+    return Promise.reject(error);
+  }
+);
 
-// Character
-export const createCharacter = (data: any) => api.post('/api/character/create', data).then(r => r.data);
-export const getCharacter = (id: string) => api.get(`/api/character/${id}`).then(r => r.data);
+// РАВНОИ API
+export const apiClient = {
+  // Правила
+  rules: {
+    getCore: () => api.get<ApiResponse<any>>('/rules/core'),
+    getMerged: () => api.get<ApiResponse<any>>('/rules/merged'),
+    getRace: (name: string) => api.get<ApiResponse<any>>(`/rules/race/${name}`),
+  },
 
-// Game
-export const startGame = (character: any, world: any) => 
-  api.post('/api/game/start', { character, world }).then(r => r.data);
-export const playerAction = (sessionId: string, action: any) => 
-  api.post('/api/game/action', { sessionId, action }).then(r => r.data);
-export const getGameSession = (sessionId: string) => 
-  api.get(`/api/game/session/${sessionId}`).then(r => r.data);
+  // Персонажи
+  character: {
+    create: (data: Partial<Character>) =>
+      api.post<ApiResponse<Character>>('/character/create', data),
+    get: (id: string) => api.get<ApiResponse<Character>>(`/character/${id}`),
+    list: () => api.get<ApiResponse<Character[]>>('/character/list'),
+  },
 
-// Custom Races
-export const fetchCustomRaces = () => api.get('/api/custom-races').then(r => r.data);
-export const createCustomRace = (data: any) => api.post('/api/custom-races', data).then(r => r.data);
-export const updateCustomRace = (name: string, data: any) => api.put(`/api/custom-races/${name}`, data).then(r => r.data);
-export const deleteCustomRace = (name: string) => api.delete(`/api/custom-races/${name}`).then(r => r.data);
+  // Пользовательские расы
+  customRaces: {
+    list: () => api.get<ApiResponse<CustomRace[]>>('/custom-races'),
+    create: (data: CustomRace) => api.post<ApiResponse<CustomRace>>('/custom-races', data),
+    update: (name: string, data: CustomRace) =>
+      api.put<ApiResponse<CustomRace>>(`/custom-races/${name}`, data),
+    delete: (name: string) => api.delete<ApiResponse<void>>(`/custom-races/${name}`),
+  },
 
-// Custom Classes
-export const fetchCustomClasses = () => api.get('/api/custom-classes').then(r => r.data);
-export const createCustomClass = (data: any) => api.post('/api/custom-classes', data).then(r => r.data);
-export const updateCustomClass = (name: string, data: any) => api.put(`/api/custom-classes/${name}`, data).then(r => r.data);
-export const deleteCustomClass = (name: string) => api.delete(`/api/custom-classes/${name}`).then(r => r.data);
+  // Пользовательские классы
+  customClasses: {
+    list: () => api.get<ApiResponse<CustomClass[]>>('/custom-classes'),
+    create: (data: CustomClass) => api.post<ApiResponse<CustomClass>>('/custom-classes', data),
+    update: (name: string, data: CustomClass) =>
+      api.put<ApiResponse<CustomClass>>(`/custom-classes/${name}`, data),
+    delete: (name: string) => api.delete<ApiResponse<void>>(`/custom-classes/${name}`),
+  },
 
-// Custom Feats
-export const fetchCustomFeats = () => api.get('/api/custom-feats').then(r => r.data);
-export const createCustomFeat = (data: any) => api.post('/api/custom-feats', data).then(r => r.data);
-export const updateCustomFeat = (name: string, data: any) => api.put(`/api/custom-feats/${name}`, data).then(r => r.data);
-export const deleteCustomFeat = (name: string) => api.delete(`/api/custom-feats/${name}`).then(r => r.data);
+  // Пользовательские особенности
+  customFeats: {
+    list: () => api.get<ApiResponse<CustomFeat[]>>('/custom-feats'),
+    create: (data: CustomFeat) => api.post<ApiResponse<CustomFeat>>('/custom-feats', data),
+    update: (name: string, data: CustomFeat) =>
+      api.put<ApiResponse<CustomFeat>>(`/custom-feats/${name}`, data),
+    delete: (name: string) => api.delete<ApiResponse<void>>(`/custom-feats/${name}`),
+  },
+
+  // Игра
+  game: {
+    startSession: (data: Partial<GameSession>) =>
+      api.post<ApiResponse<GameSession>>('/game/start', data),
+    getSession: (sessionId: string) =>
+      api.get<ApiResponse<GameSession>>(`/game/session/${sessionId}`),
+    performAction: (sessionId: string, action: any) =>
+      api.post<ApiResponse<any>>(`/game/action`, { sessionId, ...action }),
+  },
+};
+
+export default apiClient;
