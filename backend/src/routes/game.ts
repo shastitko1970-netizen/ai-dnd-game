@@ -1,70 +1,70 @@
-import { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { GameManager } from '../services/GameManager.js';
-import { RulesEngine } from '../services/RulesEngine.js';
-import { CustomContentManager } from '../services/CustomContentManager.js';
+import { AIService } from '../services/AIService.js';
 
-const gameManagers = new Map<string, GameManager>();
-
-export async function gameRoutes(fastify: FastifyInstance) {
-  const customContentManager = new CustomContentManager();
-
-  fastify.post('/start', async (request: any, reply) => {
+export async function gameRoutes(server: FastifyInstance) {
+  // Начать граю сессию
+  server.post('/game/start', async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const { character, world } = request.body;
+      const { character, world } = request.body as any;
+
+      // Настраиваем инициальные данные
+      const initialNarrative = await AIService.generateInitialNarrative(character, world);
       const sessionId = `session-${Date.now()}`;
 
-      const customContent = await customContentManager.loadCustomContent();
-      const rulesEngine = new RulesEngine(customContent);
-      const gameManager = new GameManager(rulesEngine);
+      const session = {
+        id: sessionId,
+        character,
+        world,
+        narrative: initialNarrative,
+        narrativeHistory: [initialNarrative],
+        actions: [],
+        startedAt: new Date().toISOString(),
+      };
 
-      const session = gameManager.createSession(sessionId, character, world);
-      gameManagers.set(sessionId, gameManager);
-
-      reply.status(201).send({ success: true, data: { sessionId, session } });
-    } catch (error: any) {
-      reply.status(400).send({ success: false, error: error.message });
+      return reply.send({
+        success: true,
+        data: session,
+      });
+    } catch (error) {
+      console.error('Game start ошибка:', error);
+      return reply.status(500).send({
+        success: false,
+        error: 'Ошибка начала гамы',
+      });
     }
   });
 
-  fastify.post('/action', async (request: any, reply) => {
+  // Обработать действие
+  server.post('/game/action', async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const { sessionId, action } = request.body;
-      const gameManager = gameManagers.get(sessionId);
+      const { action, narrative, character, world, previousActions } = request.body as any;
 
-      if (!gameManager) {
-        return reply.status(404).send({ success: false, error: 'Session not found' });
-      }
+      // Получаем респонс Мастера
+      const response = await AIService.generateActionResponse(
+        action,
+        narrative,
+        character,
+        world
+      );
 
-      const result = await gameManager.processAction(sessionId, action);
-      const session = gameManager.getSession(sessionId);
+      // Генерируем следующие действия
+      const nextActions = await AIService.generateNextActions(response, previousActions || []);
 
-      reply.send({
+      return reply.send({
         success: true,
         data: {
-          actionResult: result,
-          narrative: session?.narrative,
-          session
-        }
+          response,
+          nextActions,
+          timestamp: new Date().toISOString(),
+        },
       });
-    } catch (error: any) {
-      reply.status(500).send({ success: false, error: error.message });
-    }
-  });
-
-  fastify.get('/session/:sessionId', async (request: any, reply) => {
-    try {
-      const gameManager = gameManagers.get(request.params.sessionId);
-
-      if (!gameManager) {
-        return reply.status(404).send({ success: false, error: 'Session not found' });
-      }
-
-      const session = gameManager.getSession(request.params.sessionId);
-      reply.send({ success: true, data: { session } });
-    } catch (error: any) {
-      reply.status(500).send({ success: false, error: error.message });
+    } catch (error) {
+      console.error('Game action ошибка:', error);
+      return reply.status(500).send({
+        success: false,
+        error: 'Ошибка состояния активности',
+      });
     }
   });
 }
-
-export default gameRoutes;
