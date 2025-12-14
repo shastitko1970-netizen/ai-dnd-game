@@ -9,13 +9,23 @@ export class CharacterService {
   }
 
   createCharacter(data: any, mergedRules: any): Character {
+    // Validate race and class exist
     const race = mergedRules.races[data.race];
     const clazz = mergedRules.classes[data.class];
 
-    if (!race || !clazz) {
-      throw new Error('Invalid race or class');
+    if (!race) {
+      throw new Error(`Race '${data.race}' not found in available races`);
+    }
+    if (!clazz) {
+      throw new Error(`Class '${data.class}' not found in available classes`);
     }
 
+    // Validate required fields
+    if (!data.name || data.name.trim().length === 0) {
+      throw new Error('Character name is required');
+    }
+
+    // Calculate ability scores with racial bonuses
     const abilities = {
       STR: 10 + (race.abilityBonus?.STR || 0),
       DEX: 10 + (race.abilityBonus?.DEX || 0),
@@ -25,13 +35,21 @@ export class CharacterService {
       CHA: 10 + (race.abilityBonus?.CHA || 0)
     };
 
+    // Handle 'all' ability bonus (e.g., Human)
+    if (race.abilityBonus?.all) {
+      Object.keys(abilities).forEach(key => {
+        (abilities as any)[key] += race.abilityBonus.all;
+      });
+    }
+
+    // Create character with base stats
     const character: Character = {
       id: `char-${Date.now()}`,
-      name: data.name,
+      name: data.name.trim(),
       level: 1,
       race: data.race,
       class: data.class,
-      gender: data.gender,
+      gender: data.gender || 'Other',
       abilities,
       skills: this.initializeSkills(),
       feats: data.feats || [],
@@ -41,6 +59,7 @@ export class CharacterService {
       initiative: this.rulesEngine.calculateModifier(abilities.DEX)
     };
 
+    // Calculate AC and HP based on rules
     character.ac = this.rulesEngine.calculateAC(character);
     character.hp.max = this.rulesEngine.calculateHP(character);
     character.hp.current = character.hp.max;
