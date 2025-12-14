@@ -1,6 +1,6 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
-import gameRoutes from './routes/game.js';
+import { gameRoutes } from './routes/game.js';
 import rulesRoutes from './routes/rules.js';
 import characterRoutes from './routes/character.js';
 import customRacesRoutes from './routes/custom-races.js';
