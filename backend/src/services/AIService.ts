@@ -10,7 +10,7 @@ dotenv.config();
 let client: Anthropic | null = null;
 let aiEnabled = false;
 
-const MODEL = 'claude-3-haiku-20250307'; // Самая дешёвая модель
+const MODEL = 'claude-3-5-haiku-20241022'; // Правильное имя модели!
 
 /**
  * Инициализировать Claude клиент
@@ -106,7 +106,7 @@ export class AIService {
       return fallbackResponse;
     }
 
-    const systemPrompt = `Кораткие респонсы. D&D 5e. На русском.`;
+    const systemPrompt = `Краткие респонсы. D&D 5e. На русском.`;
 
     const userPrompt = `${character.name} делает: ${action}
 
