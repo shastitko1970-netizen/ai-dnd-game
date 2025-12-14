@@ -1,9 +1,11 @@
-// AIService.ts - Контроллер Claude Haiku с санитизацией и fallback'om
+// AIService.ts - Claude Haiku controller with proxy support and fallback
 
 import dotenv from 'dotenv';
 import { Anthropic } from '@anthropic-ai/sdk';
 import PromptService, { type GameContext } from './PromptService.js';
 import type { Character, World } from '../types/index.js';
+import https from 'https';
+import http from 'http';
 
 dotenv.config();
 
@@ -14,7 +16,7 @@ const MODEL = 'claude-3-5-haiku-20241022';
 const REQUEST_TIMEOUT = 30000; // 30 seconds
 
 /**
- * Инициализировать Claude клиент
+ * Initialize Claude client with optional proxy support
  */
 function initializeClient(): void {
   if (client) return;
@@ -28,14 +30,38 @@ function initializeClient(): void {
   }
 
   try {
-    client = new Anthropic({
+    const clientConfig: any = {
       apiKey: apiKey,
       timeout: REQUEST_TIMEOUT,
-    });
+    };
+
+    // Add proxy support if configured
+    const proxyUrl = process.env.PROXY_URL || process.env.HTTP_PROXY || process.env.HTTPS_PROXY;
+    
+    if (proxyUrl) {
+      console.log(`🔐 Proxy configured: ${proxyUrl.replace(/:[^/]*@/, ':***@')}`);
+      
+      try {
+        const proxyAgent = proxyUrl.startsWith('http://') 
+          ? new http.Agent({ timeout: REQUEST_TIMEOUT })
+          : new https.Agent({ timeout: REQUEST_TIMEOUT });
+        
+        // For fetch-based clients
+        clientConfig.httpAgent = proxyAgent;
+        clientConfig.httpsAgent = proxyAgent;
+      } catch (proxyErr) {
+        console.warn('⚠️  Could not setup proxy agent:', proxyErr);
+      }
+    }
+
+    client = new Anthropic(clientConfig);
 
     aiEnabled = true;
     console.log(`✅ Claude Haiku AI инициализирован (${MODEL})`);
     console.log('💰 Цена: самая дешёвая ($0.80/M input, $4/M output)');
+    if (proxyUrl) {
+      console.log('🔐 Using proxy for API requests');
+    }
   } catch (e: any) {
     console.error('❌ Ошибка инициализации:', e.message);
     aiEnabled = false;
@@ -46,7 +72,7 @@ initializeClient();
 
 export class AIService {
   /**
-   * Генерируем начальный нарратив новой игры
+   * Generate initial narrative for new game
    */
   static async generateInitialNarrative(
     character: Character,
@@ -94,14 +120,14 @@ export class AIService {
     } catch (error: any) {
       console.error('❌ AI ошибка:', error.message);
       if (error.message?.includes('Connection') || error.message?.includes('timeout')) {
-        aiEnabled = false;
+        console.warn('⚠️  Connection failed. Using fallback narrative.');
       }
       return fallbackNarrative;
     }
   }
 
   /**
-   * Анализируем намерение игрока (для ActionOrchestrator)
+   * Analyze player intent (for ActionOrchestrator)
    */
   static async analyzeAction(systemPrompt: string, userPrompt: string): Promise<string> {
     const fallback = '{"type": "freeform", "requiresRoll": false, "reasoning": "Could not analyze"}';
@@ -124,7 +150,6 @@ export class AIService {
       });
 
       const rawText = response.content[0]?.type === 'text' ? response.content[0].text : fallback;
-      // Чистим строки markdown
       const cleaned = rawText
         .replace(/```json|```|`/g, '')
         .trim();
@@ -138,7 +163,7 @@ export class AIService {
   }
 
   /**
-   * Генерируем ответ на действие игрока
+   * Generate response to player action
    */
   static async generateActionResponse(
     action: string,
@@ -177,15 +202,12 @@ export class AIService {
       return this.sanitizeOutput(rawText, language);
     } catch (error: any) {
       console.error('❌ AI ошибка:', error.message);
-      if (error.message?.includes('Connection')) {
-        aiEnabled = false;
-      }
       return fallbackResponse;
     }
   }
 
   /**
-   * Генерируем варианты действий для игрока
+   * Generate next action options for player
    */
   static async generateNextActions(
     character: Character,
@@ -242,7 +264,7 @@ export class AIService {
   }
 
   /**
-   * Очистка выхода AI от артефактов
+   * Clean AI output from artifacts
    */
   private static sanitizeOutput(text: string, language: 'ru' | 'en'): string {
     if (!text) return '';
@@ -250,34 +272,26 @@ export class AIService {
     let cleaned = text;
 
     if (language === 'ru') {
-      // От русского текста убираем английские отказы
       cleaned = cleaned
         .replace(/\b(I cannot|I apologize|I'm sorry|cannot assist|not possible)\b/gi, '')
         .replace(/\b(Ок, |Ок\.|OK|okay)\b/gi, '')
-        // От русского отказы
         .replace(/извин|скорбя|\bне могу|\bне подлю|согласно|\bне рекоменду/gi, '')
-        // От странных кодировок
         .replace(/[^\p{L}\p{N}\p{P}\p{Z}]/gu, (m) => {
-          // Оставляем кириллицу, цифры, пунктуацию
           return /[\u0430-\u044f\u0410-\u042f\u0401\u0451\s.,!?;:\-—«»()0-9]/u.test(m) ? m : '';
         });
     } else {
-      // От английского текста убираем русские коды
       cleaned = cleaned
         .replace(/[^\p{L}\p{N}\p{P}\p{Z}]/gu, (m) => {
-          // Оставляем латиницу, цифры, пунктуацию
           return /[a-zA-Z0-9\s.,!?;:\-—"'()]/u.test(m) ? m : '';
         });
     }
 
-    // Общие учистки
     cleaned = cleaned
-      .replace(/\*\*|__|```|###|##|#(?!\w)/g, '') // Markdown
-      .replace(/\[\[|\]\]/g, '') // Wiki-style brackets
-      .replace(/\s{2,}/g, ' ') // Multiple spaces
+      .replace(/\*\*|__|```|###|##|#(?!\w)/g, '')
+      .replace(/\[\[|\]\]/g, '')
+      .replace(/\s{2,}/g, ' ')
       .trim();
 
-    // Обезволивание конец строки
     return cleaned.substring(0, 5000);
   }
 }
