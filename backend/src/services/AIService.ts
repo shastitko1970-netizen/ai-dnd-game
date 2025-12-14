@@ -1,10 +1,11 @@
-// AI DM Service на OpenAI GPT-4 с поддержкой proxy
+// AI DM Service на OpenAI GPT-4 с поддержкой proxy и быстрого fallback
 
 import OpenAI from 'openai';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 import type { Character, World } from '../types/index.js';
 
 let client: OpenAI | null = null;
+let openAIEnabled = true; // Флаг доступности OpenAI
 
 /**
  * Инициализировать OpenAI клиент (опционально)
@@ -15,22 +16,25 @@ function initializeClient(): void {
   
   if (!process.env.OPENAI_API_KEY) {
     console.warn('⚠️  OPENAI_API_KEY не установлена. AI DM будет недоступен.');
+    openAIEnabled = false;
     return;
   }
   
   const options: any = {
     apiKey: process.env.OPENAI_API_KEY,
+    timeout: 10000, // 10 секунд таймаут
   };
   
   // Если задан OPENAI_PROXY, используем его
   if (process.env.OPENAI_PROXY) {
-    console.log('🔗 Используется прокси:', process.env.OPENAI_PROXY);
+    console.log('🔗 Используется прокси:', process.env.OPENAI_PROXY.replace(/@.*:/, '@***:'));
     try {
       const httpsAgent = new HttpsProxyAgent(process.env.OPENAI_PROXY);
       options.httpAgent = httpsAgent;
       options.httpsAgent = httpsAgent;
     } catch (e: any) {
       console.error('⚠️  Ошибка при конфигурации прокси:', e.message);
+      openAIEnabled = false;
     }
   }
   
@@ -46,8 +50,16 @@ export class AIService {
     character: Character,
     world: World
   ): Promise<string> {
+    // Fallback нарратив на случай недоступности AI
+    const fallbackNarrative = `Вы просыпаетесь в ${world.name}. ${character.name}, ${character.race} ${character.class}, чувствует тяжесть предстоящих испытаний. Тёмный лес окружает вас, а впереди слышны странные звуки...`;
+    
+    if (!openAIEnabled) {
+      console.log('⚠️  OpenAI недоступен, используется fallback нарратив');
+      return fallbackNarrative;
+    }
+    
     if (!client) initializeClient();
-    if (!client) return 'Вы просыпаетесь в незнакомом месте. Впереди вас ждёт опасность и приключения...';
+    if (!client || !openAIEnabled) return fallbackNarrative;
 
     const prompt = `Ты - AI Мастер Подземелья D&D 5e.
     
@@ -76,10 +88,17 @@ export class AIService {
         max_tokens: 200,
       });
 
-      return response.choices[0].message.content || 'Вы выживаете в мраке. Впереди слышны голоса...';
-    } catch (error) {
-      console.error('❌ OpenAI API ошибка при генерации нарратива:', error);
-      return 'Вы находитесь в опасной ситуации. Что вы делаете?';
+      return response.choices[0].message.content || fallbackNarrative;
+    } catch (error: any) {
+      console.error('❌ OpenAI API ошибка при генерации нарратива:', error.message);
+      
+      // Если ошибка сети - отключаем OpenAI
+      if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT' || error.message?.includes('Connection')) {
+        console.warn('⚠️  OpenAI недоступен, отключаю для этой сессии');
+        openAIEnabled = false;
+      }
+      
+      return fallbackNarrative;
     }
   }
 
@@ -92,8 +111,15 @@ export class AIService {
     character: Character,
     world: World
   ): Promise<string> {
+    const fallbackResponse = `Ваше действие "${action}" имеет неожиданный результат. Окружающий мир меняется, и перед вами открывается новый путь. Что вы делаете дальше?`;
+    
+    if (!openAIEnabled) {
+      console.log('⚠️  OpenAI недоступен, используется fallback ответ');
+      return fallbackResponse;
+    }
+    
     if (!client) initializeClient();
-    if (!client) return `Ваше действие "${action}" имеет неожиданный результат. Что дальше?`;
+    if (!client || !openAIEnabled) return fallbackResponse;
 
     const prompt = `Игровой контекст:
 ${previousNarrative}
@@ -119,10 +145,15 @@ ${previousNarrative}
         max_tokens: 250,
       });
 
-      return response.choices[0].message.content || 'Что-то неожиданное происходит...';
-    } catch (error) {
-      console.error('❌ OpenAI API ошибка при обработке действия:', error);
-      return 'Действие выполнено. Что дальше?';
+      return response.choices[0].message.content || fallbackResponse;
+    } catch (error: any) {
+      console.error('❌ OpenAI API ошибка при обработке действия:', error.message);
+      
+      if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT' || error.message?.includes('Connection')) {
+        openAIEnabled = false;
+      }
+      
+      return fallbackResponse;
     }
   }
 
@@ -133,8 +164,15 @@ ${previousNarrative}
     narrative: string,
     previousActions: string[] = []
   ): Promise<string[]> {
+    const fallbackActions = ['Атаковать', 'Осмотреть окрестности', 'Поговорить', 'Отступить'];
+    
+    if (!openAIEnabled) {
+      console.log('⚠️  OpenAI недоступен, используются fallback действия');
+      return fallbackActions;
+    }
+    
     if (!client) initializeClient();
-    if (!client) return ['Атаковать', 'Осмотреть', 'Поговорить'];
+    if (!client || !openAIEnabled) return fallbackActions;
 
     const prompt = `На основании этого нарратива:
 ${narrative}
@@ -165,10 +203,15 @@ ${narrative}
       const content = response.choices[0].message.content || '[]';
       const cleanContent = content.replace(/```json|```|`/g, '').trim();
       const parsed = JSON.parse(cleanContent);
-      return Array.isArray(parsed) ? parsed : ['Атаковать', 'Осмотреть', 'Поговорить'];
-    } catch (error) {
-      console.error('❌ AI ошибка генерации действий:', error);
-      return ['Атаковать', 'Осмотреть', 'Поговорить', 'Отступить'];
+      return Array.isArray(parsed) ? parsed : fallbackActions;
+    } catch (error: any) {
+      console.error('❌ AI ошибка генерации действий:', error.message);
+      
+      if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT' || error.message?.includes('Connection')) {
+        openAIEnabled = false;
+      }
+      
+      return fallbackActions;
     }
   }
 }
