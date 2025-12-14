@@ -53,7 +53,7 @@ export class AIService {
     world: World,
     context: GameContext = {
       narrativeHistory: '',
-      lastAction: 'Герой пришел в мир',
+      lastAction: 'Герой пришол в мир',
       emotionalState: 'Ожидание и Нервозность',
       sessionDuration: 0,
     },
@@ -97,6 +97,43 @@ export class AIService {
         aiEnabled = false;
       }
       return fallbackNarrative;
+    }
+  }
+
+  /**
+   * Анализируем намерение игрока (для ActionOrchestrator)
+   */
+  static async analyzeAction(systemPrompt: string, userPrompt: string): Promise<string> {
+    const fallback = '{"type": "freeform", "requiresRoll": false, "reasoning": "Could not analyze"}';
+
+    if (!aiEnabled || !client) {
+      return fallback;
+    }
+
+    try {
+      const response = await client.messages.create({
+        model: MODEL,
+        max_tokens: 200,
+        system: systemPrompt,
+        messages: [
+          {
+            role: 'user',
+            content: userPrompt,
+          },
+        ],
+      });
+
+      const rawText = response.content[0]?.type === 'text' ? response.content[0].text : fallback;
+      // Чистим строки markdown
+      const cleaned = rawText
+        .replace(/```json|```|`/g, '')
+        .trim();
+
+      console.log('📊 Анализ действия: OK');
+      return cleaned;
+    } catch (error: any) {
+      console.error('❌ Ошибка анализа:', error.message);
+      return fallback;
     }
   }
 
@@ -166,7 +203,7 @@ export class AIService {
 
     const systemPrompt = PromptService.getSystemPrompt(character, world, context, language);
     const userPrompt = language === 'ru'
-      ? `Броси 3 коротких актиона JSON: ["\u0434е\u0439\u0441\u0442\u0432\u0438\u0435\u0420у\u0441\u0441\u043a\u0438\u0435", ...]`
+      ? `Брось 3 коротких актиона JSON: ["действиеРусские", ...]`
       : `Generate 3 short action options in JSON: ["action1", "action2", "action3"]`;
 
     try {
@@ -233,7 +270,7 @@ export class AIService {
         });
     }
 
-    // Общие мочиски
+    // Общие учистки
     cleaned = cleaned
       .replace(/\*\*|__|```|###|##|#(?!\w)/g, '') // Markdown
       .replace(/\[\[|\]\]/g, '') // Wiki-style brackets
