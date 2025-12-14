@@ -4,9 +4,9 @@
 
 ## Особенности
 
-✅ **Полная система правил D&D 5e** - Создание персонажей со всеми расами, классами и особенностями  
+✅ **Полная система правил D&D 5e** - 35 рас, 12 классов, динамическое создание персонажей  
 ✅ **AI Мастер Подземелья** - GPT-4 создаёт динамические сюжеты и встречи  
-✅ **Система пользовательского контента** - Создавайте собственные расы, классы и особенности  
+✅ **Система пользовательского контента** - Создавайте собственные расы, классы и особенности прямо в мастере  
 ✅ **Реальная боевая система** - Инициатива, атаки, заклинания, урон  
 ✅ **Листы персонажей** - Подробные характеристики, навыки, владение оружием  
 ✅ **Production-ready** - TypeScript везде, полная валидация, обработка ошибок  
@@ -17,30 +17,28 @@
 - **Next.js 14** (App Router)
 - **React 18** + TypeScript
 - **Tailwind CSS** для стилей
-- **Zustand** для управления состоянием
 
 ### Бэкенд
 - **Fastify** с TypeScript
 - **OpenAI API** (GPT-4) для AI DM
-- **JSON-based хранилище** (можно расширить на MongoDB)
+- **JSON-based хранилище** D&D 5e правил
 
 ## Структура проекта
 
 ```
 ai-dnd-game/
-├── frontend/          # Next.js приложение
-│   ├── app/          # Страницы и макеты
-│   ├── components/   # React компоненты
-│   ├── lib/          # Утилиты, хранилище, API
-│   └── public/       # Статические файлы + dnd-5e-rules.json
-├── backend/          # Fastify сервер
+├── frontend/
+│   ├── app/character-create/        # Мастер создания персонажа
+│   ├── public/dnd-5e-rules.json     # 35 рас, спеллы, мастера
+│   └── ...
+├── backend/
 │   └── src/
-│       ├── routes/   # API endpoints
-│       ├── services/ # Бизнес-логика
-│       ├── types/    # TypeScript интерфейсы
-│       ├── utils/    # Помощники
-│       └── data/     # Основные правила + пользовательский контент
-└── package.json      # Root конфигурация
+│       ├── services/RulesEngine.ts   # Загружает JSON, объединяет правила
+│       ├── routes/rules.ts           # API для рас/классов/спеллов
+│       ├── routes/character.ts       # Создание персонажа
+│       ├── data/dnd-5e-rules.json   # Зеркало правил для backend
+│       └── ...
+└── ...
 ```
 
 ## Быстрый старт
@@ -53,33 +51,23 @@ ai-dnd-game/
 ### Установка
 
 ```bash
-# Клонирование и установка
 git clone https://github.com/shastitko1970-netizen/ai-dnd-game.git
 cd ai-dnd-game
-
-# Установка корневых зависимостей
 npm install
-
-# Установка фронтенда
 cd frontend && npm install && cd ..
-
-# Установка бэкенда
 cd backend && npm install && cd ..
 ```
 
 ### Конфигурация
 
-Создай файлы `.env`:
-
 **frontend/.env.local**
 ```
 NEXT_PUBLIC_API_URL=http://localhost:3001
-NEXT_PUBLIC_ENVIRONMENT=development
 ```
 
 **backend/.env**
 ```
-OPENAI_API_KEY=sk-твой-ключ-здесь
+OPENAI_API_KEY=sk-...
 PORT=3001
 NODE_ENV=development
 ```
@@ -87,70 +75,57 @@ NODE_ENV=development
 ### Запуск
 
 ```bash
-# Терминал 1: Запуск бэкенда
-cd backend
-npm run dev
+# Terminal 1
+cd backend && npm run dev
 
-# Терминал 2: Запуск фронтенда
-cd frontend
-npm run dev
+# Terminal 2
+cd frontend && npm run dev
 
-# Открой http://localhost:3000 в браузере
+# Open http://localhost:3000
 ```
 
 ## Поток игры
 
-1. **Главная страница** - Начни своё приключение
-2. **Выбор мира** - Выбери игровой мир
-3. **Создание персонажа** - 3-шаговый мастер (имя, раса/класс, подтверждение)
-4. **Игровая сессия** - Играй с AI DM
-5. **Пользовательский контент** - Создавай собственные расы, классы, особенности
-
-## Основные концепции
-
-### RulesEngine
-Объединяет **основные правила D&D 5e** (неизменяемые) с **пользовательским контентом** (создаваемым пользователями) в единый набор правил для игры.
-
-### Система пользовательского контента
-Игроки могут создавать:
-- **Собственные расы**: Бонусы характеристик, особенности, скорость
-- **Собственные классы**: Кубики здоровья, особенности по уровням
-- **Собственные особенности**: Пассивные или активные преимущества
-
-Всё валидируется перед сохранением, нельзя изменять официальный контент.
+1. **Главная страница** → выбор мира
+2. **Мастер создания персонажа** (3 шага):
+   - Шаг 1: Имя, пол
+   - Шаг 2: Выбор или создание расы (35+ опций) и класса (12+ опций)
+   - Шаг 3: Подтверждение
+3. **Игровая сессия** с AI DM
 
 ## API Endpoints
 
-### Правила
-- `GET /api/rules/core` - Официальные правила
-- `GET /api/rules/merged` - Основные + пользовательские
-- `GET /api/rules/spell/:name` - Конкретное заклинание
+### Правила (новое)
+- `GET /api/rules/races` — все доступные расы (35+)
+- `GET /api/rules/classes` — все доступные классы (12+)
+- `GET /api/rules/races/:name` — конкретная раса
+- `GET /api/rules/classes/:name` — конкретный класс
+- `GET /api/rules/core` — статистика правил
 
 ### Персонаж
-- `POST /api/character/create` - Создать персонажа
-- `GET /api/character/:id` - Получить персонажа
+- `POST /api/character/create` — создание персонажа
+- `GET /api/character/:id` — получение персонажа
 
 ### Пользовательский контент
-- `GET /api/custom-races` - Список собственных рас
-- `POST /api/custom-races` - Создать расу
-- `PUT /api/custom-races/:name` - Обновить расу
-- `DELETE /api/custom-races/:name` - Удалить расу
-- То же для `/custom-classes` и `/custom-feats`
+- `POST /api/custom-races` — создать расу
+- `POST /api/custom-classes` — создать класс
+- `POST /api/custom-feats` — создать особенность
 
-### Игра
-- `POST /api/game/start` - Начать сессию
-- `POST /api/game/action` - Действие игрока
-- `POST /api/game/combat/start` - Начать боевой раунд
-- `GET /api/game/session/:sessionId` - Получить состояние сессии
+## Содержание
+
+### Расы (35)
+Классические: Human, Elf, Dwarf, Halfling, Dragonborn, Tiefling, Gnome  
+Экзотические: Aarakocra, Aasimar, Bugbear, Centaur, Fairy, Firbolg, Genasi (x4), Gith, Goblin, Goliath, Hadozee, Kenku, Kobold, Leonin, Lizardfolk, Minotaur, Orc, Satyr, Tabaxi, Tortle
+
+### Классы (12)
+Barbarian, Bard, Cleric, Druid, Fighter, Monk, Paladin, Ranger, Rogue, Sorcerer, Warlock, Wizard
 
 ## Production-качество
 
 ✅ 100% TypeScript  
-✅ Полная валидация  
-✅ Полная обработка ошибок  
-✅ Нет примеров кода  
-✅ Нет TODO  
-✅ Работает сразу после `npm install`
+✅ Полная валидация против D&D 5e правил  
+✅ Обработка ошибок  
+✅ Работает сразу после установки  
 
 ## Лицензия
 
@@ -158,4 +133,4 @@ MIT
 
 ---
 
-**Статус**: Готово к production | **Последнее обновление**: 2025-12-13
+**Статус**: Production-ready | **Последнее обновление**: 2025-12-14 | **Версия контента**: 35 рас, 12 классов
