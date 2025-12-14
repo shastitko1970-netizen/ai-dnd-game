@@ -1,15 +1,13 @@
-// AI DM Service на OpenAI GPT-4 с поддержкой proxy и быстрого fallback
+// AI DM Service на OpenAI GPT-4 с быстрым fallback
 
 import OpenAI from 'openai';
-import { HttpsProxyAgent } from 'https-proxy-agent';
 import type { Character, World } from '../types/index.js';
 
 let client: OpenAI | null = null;
 let openAIEnabled = true; // Флаг доступности OpenAI
 
 /**
- * Инициализировать OpenAI клиент (опционально)
- * Поддерживает OPENAI_PROXY для обхода блокировок
+ * Инициализировать OpenAI клиент
  */
 function initializeClient(): void {
   if (client) return;
@@ -20,25 +18,11 @@ function initializeClient(): void {
     return;
   }
   
-  const options: any = {
+  client = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
-    timeout: 10000, // 10 секунд таймаут
-  };
+    timeout: 15000, // 15 секунд таймаут
+  });
   
-  // Если задан OPENAI_PROXY, используем его
-  if (process.env.OPENAI_PROXY) {
-    console.log('🔗 Используется прокси:', process.env.OPENAI_PROXY.replace(/@.*:/, '@***:'));
-    try {
-      const httpsAgent = new HttpsProxyAgent(process.env.OPENAI_PROXY);
-      options.httpAgent = httpsAgent;
-      options.httpsAgent = httpsAgent;
-    } catch (e: any) {
-      console.error('⚠️  Ошибка при конфигурации прокси:', e.message);
-      openAIEnabled = false;
-    }
-  }
-  
-  client = new OpenAI(options);
   console.log('✅ OpenAI client инициализирован');
 }
 
