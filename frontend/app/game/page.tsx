@@ -102,7 +102,7 @@ export default function GamePage() {
       
       setNarrative(data.data.narrative);
       setNarrativeHistory([data.data.narrative]);
-      setCurrentActions(['⚔️ Атаковать', '🔍 Осмотреть', '💬 Поговорить', '✨ Исследовать']);
+      setCurrentActions(['⚔️ Атаковать', '🔍 Осмотреть', '🗣️ Поговорить', '✨ Исследовать']);
       setGameStarted(true);
       setTurn(0);
     } catch (err) {
@@ -155,7 +155,7 @@ export default function GamePage() {
       setLastActionIntent(gameData.actionIntent);
       setTurn(gameData.turn);
 
-      // 📖 ФОРМИРУЕМ ИСТОРИЮ
+      // 📖 ФОРМиРУЕМ ИСТОРИЮ
       const playerLine = `\n\n[${character.name}]: ${action}`;
       const gmLine = `\n[🎲 GM]: ${gameData.narrative}`;
       
@@ -178,8 +178,8 @@ export default function GamePage() {
         gmLine
       ]);
       
-      // 🎬 СЛЕДУЮЩИЕ ДЕЙСТВИЯ ИЗ БЭКЕНДА
-      setCurrentActions(gameData.nextActions || ['⚔️ Атаковать', '🔍 Осмотреть', '💬 Поговорить']);
+      // 🎬 СЛЕДУЮЩИЕ ДЕЙСТВИЙ ИЗ БЭКЕНДА
+      setCurrentActions(gameData.nextActions || ['⚔️ Атаковать', '🔍 Осмотреть', '🗣️ Поговорить']);
       setUserInput('');
 
       console.log(`✅ Action processed:`, gameData);
@@ -198,7 +198,7 @@ export default function GamePage() {
     await handleAction(userInput);
   };
 
-  // 🎨 РЕНДЕР
+  // 🌨 РЕНДЕР
   if (!character || !gameStarted) {
     return (
       <div className="text-center py-12 text-slate-300">
@@ -266,7 +266,7 @@ export default function GamePage() {
                 {lastActionIntent.difficulty && <span className="text-slate-400"> • DC: <strong>{lastActionIntent.difficulty}</strong></span>}
               </p>
               <p className="text-xs text-slate-500 mt-2">
-                {lastActionIntent.requiresRoll ? '🎲 Требует броска' : '📝 Без броска'}
+                {lastActionIntent.requiresRoll ? '🎲 Требует броска' : '📗 Без броска'}
               </p>
             </div>
           )}
@@ -287,9 +287,9 @@ export default function GamePage() {
               ))}
             </div>
 
-            {/* ✏️ ПОЛЬЗОВАТЕЛЬСКИЙ ВВОД */}
+            {/* ✍️ ПОЛЬЗОВАТЕЛЬСКИЙ ВВОД */}
             <div className="space-y-2">
-              <label className="block text-slate-300 text-sm font-semibold">✏️ Собственный ход:</label>
+              <label className="block text-slate-300 text-sm font-semibold">✍️ Собственный ход:</label>
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -313,15 +313,15 @@ export default function GamePage() {
           </div>
         </div>
 
-        {/* 👤 ПЕРСОНАЖ И ИНФОРМАЦИЯ */}
-        <div>
-          {/* 👤 ПЕРСОНАЖ */}
-          <div className="card sticky top-4 border border-slate-600 mb-6">
-            <h3 className="text-xl font-bold text-teal-400 mb-4">👤 Персонаж</h3>
+        {/* 🐤 ПЕРСОНАЖ И НФОРМАЦИЯ */}
+        <div className="space-y-6">
+          {/* 🐤 ПЕРСОНАЖ */}
+          <div className="card sticky top-4 h-fit max-h-[calc(100vh-2rem)] overflow-y-auto border border-slate-600">
+            <h3 className="text-xl font-bold text-teal-400 mb-4">🐤 Персонаж</h3>
             <div className="space-y-3 text-sm text-slate-300">
               <div className="border-b border-slate-700 pb-3">
-                <p><strong>📝 Имя:</strong> {character.name}</p>
-                <p><strong>🧝 Раса:</strong> {character.race}</p>
+                <p><strong>📏 Имя:</strong> {character.name}</p>
+                <p><strong>🧗 Раса:</strong> {character.race}</p>
                 <p><strong>⚔️ Класс:</strong> {character.class}</p>
                 <p><strong>📊 Уровень:</strong> {character.level || 1}</p>
                 {character.alignment && <p><strong>⚖️ Мировоззрение:</strong> {character.alignment}</p>}
@@ -367,7 +367,7 @@ export default function GamePage() {
             </button>
           </div>
 
-          {/* 📊 ИНФОРМАЦИЯ О СЕССИИ */}
+          {/* 📊 НФОРМАЦИЯ О СЕССИИ */}
           <div className="card border border-slate-600">
             <h4 className="text-sm font-bold text-teal-400 mb-3">📊 Сессия</h4>
             <div className="space-y-2 text-xs text-slate-400 font-mono">
