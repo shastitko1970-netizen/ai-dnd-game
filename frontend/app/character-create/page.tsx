@@ -20,6 +20,7 @@ export default function CharacterCreate() {
   const [racesList, setRacesList] = useState<Race[]>([]);
   const [classesList, setClassesList] = useState<Class[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>('');
 
   // Mode toggles for creating custom race/class
   const [useCustomRace, setUseCustomRace] = useState(false);
@@ -59,33 +60,55 @@ export default function CharacterCreate() {
 
   const loadRacesAndClasses = async () => {
     try {
+      setError('');
+      setLoading(true);
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-      const [racesRes, classesRes] = await Promise.all([
-        fetch(`${apiUrl}/api/rules/races`),
-        fetch(`${apiUrl}/api/rules/classes`)
-      ]);
+      console.log(`🔄 Загружаю расы...`);
+      const racesRes = await fetch(`${apiUrl}/api/rules/races`, {
+        headers: { 'Content-Type': 'application/json' }
+      });
+      console.log(`Ответ races:`, racesRes.status);
 
-      if (racesRes.ok && classesRes.ok) {
-        const racesData = await racesRes.json();
-        const classesData = await classesRes.json();
-
-        if (racesData.data) {
-          setRacesList(racesData.data);
-          if (racesData.data.length > 0 && !formData.race) {
-            setFormData(prev => ({ ...prev, race: racesData.data[0].name }));
-          }
-        }
-
-        if (classesData.data) {
-          setClassesList(classesData.data);
-          if (classesData.data.length > 0 && !formData.class) {
-            setFormData(prev => ({ ...prev, class: classesData.data[0].name }));
-          }
-        }
+      if (!racesRes.ok) {
+        throw new Error(`Ошибка загружки рас: ${racesRes.status}`);
       }
-    } catch (error) {
-      console.error('Error loading races/classes:', error);
+
+      const classesRes = await fetch(`${apiUrl}/api/rules/classes`, {
+        headers: { 'Content-Type': 'application/json' }
+      });
+      console.log(`Ответ classes:`, classesRes.status);
+
+      if (!classesRes.ok) {
+        throw new Error(`Ошибка загружки классов: ${classesRes.status}`);
+      }
+
+      const racesData = await racesRes.json();
+      const classesData = await classesRes.json();
+
+      console.log(`✅ Получено ${racesData.data?.length || 0} рас`);
+      console.log(`✅ Получено ${classesData.data?.length || 0} классов`);
+
+      if (racesData.data && Array.isArray(racesData.data)) {
+        setRacesList(racesData.data);
+        if (racesData.data.length > 0) {
+          setFormData(prev => ({ ...prev, race: racesData.data[0].name }));
+        }
+      } else {
+        throw new Error('Неверные данные рас');
+      }
+
+      if (classesData.data && Array.isArray(classesData.data)) {
+        setClassesList(classesData.data);
+        if (classesData.data.length > 0) {
+          setFormData(prev => ({ ...prev, class: classesData.data[0].name }));
+        }
+      } else {
+        throw new Error('Неверные данные классов');
+      }
+    } catch (err: any) {
+      console.error(`❌ Ошибка загружки:`, err);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -98,6 +121,7 @@ export default function CharacterCreate() {
     }
 
     try {
+      setError('');
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       const response = await fetch(`${apiUrl}/api/custom-races`, {
         method: 'POST',
@@ -118,12 +142,14 @@ export default function CharacterCreate() {
           abilityBonus: { STR: 0, DEX: 0, CON: 0, INT: 0, WIS: 0, CHA: 0 },
           features: []
         });
+        alert('Раса создана!');
       } else {
-        alert('Ошибка создания расы');
+        const errData = await response.json();
+        setError(`Ошибка: ${errData.error || 'Ошибка создания расы'}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating custom race:', error);
-      alert('Ошибка создания расы');
+      setError(error.message);
     }
   };
 
@@ -134,6 +160,7 @@ export default function CharacterCreate() {
     }
 
     try {
+      setError('');
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       const response = await fetch(`${apiUrl}/api/custom-classes`, {
         method: 'POST',
@@ -154,12 +181,14 @@ export default function CharacterCreate() {
           savingThrows: [],
           features: []
         });
+        alert('Класс создан!');
       } else {
-        alert('Ошибка создания класса');
+        const errData = await response.json();
+        setError(`Ошибка: ${errData.error || 'Ошибка создания класса'}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating custom class:', error);
-      alert('Ошибка создания класса');
+      setError(error.message);
     }
   };
 
@@ -186,6 +215,7 @@ export default function CharacterCreate() {
     }
 
     try {
+      setError('');
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       const response = await fetch(`${apiUrl}/api/character/create`, {
         method: 'POST',
@@ -203,7 +233,7 @@ export default function CharacterCreate() {
       router.push('/game');
     } catch (error: any) {
       console.error('Character creation error:', error);
-      alert(`Ошибка: ${error.message}`);
+      setError(`Ошибка: ${error.message}`);
     }
   };
 
@@ -212,7 +242,13 @@ export default function CharacterCreate() {
       <div className="max-w-2xl mx-auto px-4 py-12">
         <div className="card">
           <h2 className="text-3xl font-bold text-teal-400 mb-6">Создай персонажа</h2>
-          <p className="text-slate-300">Загружаю расы и классы...</p>
+          <p className="text-slate-300 mb-4"><span className="inline-block animate-spin mr-2">⛳</span>Загружаю расы и классы...</p>
+          {error && (
+            <div className="bg-red-900 border border-red-600 text-red-200 px-4 py-3 rounded">
+              <p><strong>Загружка не удалась:</strong> {error}</p>
+              <p className="text-sm mt-2">Проверь, что backend запущен на localhost:3001</p>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -223,6 +259,12 @@ export default function CharacterCreate() {
       <div className="card">
         <h2 className="text-3xl font-bold text-teal-400 mb-6">Создай персонажа</h2>
         <p className="text-slate-300 mb-6">Шаг {step} из 3</p>
+
+        {error && (
+          <div className="bg-red-900 border border-red-600 text-red-200 px-4 py-3 rounded mb-6">
+            {error}
+          </div>
+        )}
 
         {step === 1 && (
           <div className="space-y-4">
@@ -255,7 +297,7 @@ export default function CharacterCreate() {
           <div className="space-y-6">
             {/* Раса */}
             <div>
-              <label className="block text-slate-300 mb-2 font-semibold">Раса</label>
+              <label className="block text-slate-300 mb-2 font-semibold">Раса ({racesList.length})</label>
               {!useCustomRace ? (
                 <>
                   <select
@@ -274,7 +316,7 @@ export default function CharacterCreate() {
                     onClick={() => setUseCustomRace(true)}
                     className="text-teal-400 hover:text-teal-300 text-sm underline"
                   >
-                    Создать свою расу
+                    + Создать свою расу
                   </button>
                 </>
               ) : (
@@ -309,13 +351,13 @@ export default function CharacterCreate() {
                       onClick={handleCreateCustomRace}
                       className="flex-1 btn btn-primary btn-sm"
                     >
-                      Создать расу
+                      Сохранить
                     </button>
                     <button
                       onClick={() => setUseCustomRace(false)}
                       className="flex-1 btn btn-secondary btn-sm"
                     >
-                      Назад
+                      Отмена
                     </button>
                   </div>
                 </div>
@@ -324,7 +366,7 @@ export default function CharacterCreate() {
 
             {/* Класс */}
             <div>
-              <label className="block text-slate-300 mb-2 font-semibold">Класс</label>
+              <label className="block text-slate-300 mb-2 font-semibold">Класс ({classesList.length})</label>
               {!useCustomClass ? (
                 <>
                   <select
@@ -343,7 +385,7 @@ export default function CharacterCreate() {
                     onClick={() => setUseCustomClass(true)}
                     className="text-teal-400 hover:text-teal-300 text-sm underline"
                   >
-                    Создать свой класс
+                    + Создать свой класс
                   </button>
                 </>
               ) : (
@@ -381,13 +423,13 @@ export default function CharacterCreate() {
                       onClick={handleCreateCustomClass}
                       className="flex-1 btn btn-primary btn-sm"
                     >
-                      Создать класс
+                      Сохранить
                     </button>
                     <button
                       onClick={() => setUseCustomClass(false)}
                       className="flex-1 btn btn-secondary btn-sm"
                     >
-                      Назад
+                      Отмена
                     </button>
                   </div>
                 </div>
