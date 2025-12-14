@@ -9,6 +9,7 @@ export async function characterRoutes(fastify: FastifyInstance) {
       const customContentManager = new CustomContentManager();
       const customContent = await customContentManager.loadCustomContent();
       const rulesEngine = new RulesEngine(customContent);
+      await rulesEngine.loadCoreRules();
       const mergedRules = rulesEngine.getMergedRules();
 
       const characterService = new CharacterService(rulesEngine);
@@ -16,6 +17,7 @@ export async function characterRoutes(fastify: FastifyInstance) {
 
       reply.status(201).send({ success: true, data: character });
     } catch (error: any) {
+      console.error('Character creation error:', error);
       reply.status(400).send({ success: false, error: error.message });
     }
   });
