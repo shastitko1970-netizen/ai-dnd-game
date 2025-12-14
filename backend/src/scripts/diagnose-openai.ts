@@ -7,7 +7,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import OpenAI from 'openai';
-import HttpsProxyAgent from 'https-proxy-agent';
+import { HttpsProxyAgent } from 'https-proxy-agent';
 
 // Load .env file
 const __filename = fileURLToPath(import.meta.url);
@@ -32,7 +32,7 @@ if (!apiKey) {
 console.log('✅ API ключ найден:', apiKey.substring(0, 20) + '...');
 
 if (proxyUrl) {
-  console.log('🔗 Прокси задан:', proxyUrl);
+  console.log('🔗 Прокси задан:', proxyUrl.replace(/@.*:/, '@***:'));
 } else {
   console.log('⚠️  OPENAI_PROXY не задан в .env');
 }
