@@ -1,7 +1,7 @@
 // AI DM Service на OpenAI GPT-4 с поддержкой proxy
 
 import OpenAI from 'openai';
-import HttpsProxyAgent from 'https-proxy-agent';
+import { HttpsProxyAgent } from 'https-proxy-agent';
 import type { Character, World } from '../types/index.js';
 
 let client: OpenAI | null = null;
@@ -25,9 +25,13 @@ function initializeClient(): void {
   // Если задан OPENAI_PROXY, используем его
   if (process.env.OPENAI_PROXY) {
     console.log('🔗 Используется прокси:', process.env.OPENAI_PROXY);
-    const httpsAgent = new HttpsProxyAgent(process.env.OPENAI_PROXY);
-    options.httpAgent = httpsAgent;
-    options.httpsAgent = httpsAgent;
+    try {
+      const httpsAgent = new HttpsProxyAgent(process.env.OPENAI_PROXY);
+      options.httpAgent = httpsAgent;
+      options.httpsAgent = httpsAgent;
+    } catch (e: any) {
+      console.error('⚠️  Ошибка при конфигурации прокси:', e.message);
+    }
   }
   
   client = new OpenAI(options);
