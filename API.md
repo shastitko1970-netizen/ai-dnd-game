@@ -1,38 +1,38 @@
-# API Documentation
+# ПОЛНАЯ НА НАДО API
 
-## Base URL
+## Базовый URL
 
 ```
 http://localhost:3001/api
 ```
 
-## Health Check
+## Проверка здоровья
 
-### Check if server is running
+### Проверить если сервер работает
 
 ```bash
 GET /health
 ```
 
-**Response:**
+**Ответ:**
 ```json
 {
   "status": "ok",
-  "timestamp": "2025-12-13T17:00:00.000Z"
+  "timestamp": "2025-12-14T05:45:00.000Z"
 }
 ```
 
 ---
 
-## Rules Endpoints
+## Эндпоинты Правилы
 
-### Get Core Rules (Official)
+### Получить Основные Правила (Официальные)
 
 ```bash
 GET /api/rules/core
 ```
 
-**Response:**
+**Ответ:**
 ```json
 {
   "success": true,
@@ -44,13 +44,13 @@ GET /api/rules/core
 }
 ```
 
-### Get Merged Rules (Core + Custom)
+### Получить Мерженные Правила (Основные + Пользовательские)
 
 ```bash
 GET /api/rules/merged
 ```
 
-**Response:**
+**Ответ:**
 ```json
 {
   "success": true,
@@ -62,43 +62,29 @@ GET /api/rules/merged
 }
 ```
 
-### Get Specific Race
+### Получить Конкретную Расу
 
 ```bash
 GET /api/rules/race/:name
 ```
 
-**Example:**
+**Пример:**
 ```bash
 curl http://localhost:3001/api/rules/race/Human
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "name": "Human",
-    "size": "Medium",
-    "speed": 30,
-    "abilityBonus": { "STR": 0, ... },
-    "features": [...]
-  }
-}
-```
-
 ---
 
-## Character Endpoints
+## Население Эндпоинты
 
-### Create Character
+### На Персонажа
 
 ```bash
 POST /api/character/create
 Content-Type: application/json
 ```
 
-**Request Body:**
+**Тело запроса:**
 ```json
 {
   "name": "Aragorn",
@@ -109,64 +95,29 @@ Content-Type: application/json
 }
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "char-1702442400000",
-    "name": "Aragorn",
-    "level": 1,
-    "race": "Human",
-    "class": "Fighter",
-    "gender": "Male",
-    "abilities": {
-      "STR": 10,
-      "DEX": 10,
-      "CON": 10,
-      "INT": 10,
-      "WIS": 10,
-      "CHA": 10
-    },
-    "hp": { "current": 10, "max": 10 },
-    "ac": 10,
-    "initiative": 0
-  }
-}
-```
-
-### Get Character
+### Получить Персонаж
 
 ```bash
 GET /api/character/:id
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "data": { /* character object */ }
-}
-```
-
 ---
 
-## Custom Content Endpoints
+## Пользовательского Контента Эндпоинты
 
-### Custom Races
+### Собственные Расы
 
-#### List Custom Races
+#### Срси
 ```bash
 GET /api/custom-races
 ```
 
-#### Create Custom Race
+#### На расу
 ```bash
 POST /api/custom-races
-Content-Type: application/json
 ```
 
-**Request Body:**
+**Тело запроса:**
 ```json
 {
   "name": "Shadow Elf",
@@ -188,100 +139,51 @@ Content-Type: application/json
 }
 ```
 
-**Validation Rules:**
-- `name`: 2-50 characters, unique
-- `speed`: 20-40 feet
-- `abilityBonus` each: -2 to +2
-- `abilityBonus` total: max +6
-- `features`: 0-3 items
-
-#### Update Custom Race
+**На Пользователя Расы**
 ```bash
 PUT /api/custom-races/:name
 Content-Type: application/json
 ```
 
-#### Delete Custom Race
+**Удалить Пользователя Расы**
 ```bash
 DELETE /api/custom-races/:name
 ```
 
-### Custom Classes
+### Собственные Классы
 
-#### List
+#### Срси
 ```bash
 GET /api/custom-classes
 ```
 
-#### Create
+#### На Класс
 ```bash
 POST /api/custom-classes
 ```
 
-**Request Body:**
-```json
-{
-  "name": "Spellblade",
-  "description": "A warrior who weaves magic",
-  "hitDice": 8,
-  "primaryAbility": "INT",
-  "customFeatures": []
-}
-```
-
-#### Update
+#### Обновить
 ```bash
 PUT /api/custom-classes/:name
 ```
 
-#### Delete
+#### Удалить
 ```bash
 DELETE /api/custom-classes/:name
 ```
 
-### Custom Feats
-
-#### List
-```bash
-GET /api/custom-feats
-```
-
-#### Create
-```bash
-POST /api/custom-feats
-```
-
-**Request Body:**
-```json
-{
-  "name": "Arcane Resilience",
-  "description": "You gain +1 to saving throws against magic",
-  "prerequisite": "INT 13 or higher"
-}
-```
-
-#### Update
-```bash
-PUT /api/custom-feats/:name
-```
-
-#### Delete
-```bash
-DELETE /api/custom-feats/:name
-```
-
 ---
 
-## Game Endpoints
+## Игровые Эндпоинты
 
-### Start Game Session
+### На Новую Сессию
 
 ```bash
 POST /api/game/start
 Content-Type: application/json
 ```
 
-**Request Body:**
+**Тело запроса:**
 ```json
 {
   "character": { /* character object */ },
@@ -295,82 +197,39 @@ Content-Type: application/json
 }
 ```
 
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "sessionId": "session-1702442400000",
-    "session": { /* session object */ }
-  }
-}
-```
-
-### Player Action
+### Действие Организетора
 
 ```bash
 POST /api/game/action
 Content-Type: application/json
 ```
 
-**Request Body:**
+**Тело запроса:**
 ```json
 {
-  "sessionId": "session-1702442400000",
+  "sessionId": "session-123",
   "action": {
     "type": "attack",
     "weapon": "sword",
     "target": "goblin",
-    "timestamp": "2025-12-13T17:00:00Z"
+    "timestamp": "2025-12-14T05:45:00Z"
   }
 }
 ```
 
-**Action Types:**
-- `attack` - Attack an enemy
-- `spell` - Cast a spell
-- `dodge` - Take defensive stance
-- `disengage` - Leave combat
-- `hide` - Hide from enemies
-- `help` - Help an ally
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "actionResult": {
-      "success": true,
-      "text": "You attack with your sword!",
-      "damage": 8
-    },
-    "narrative": "The goblin staggers back...",
-    "session": { /* updated session */ }
-  }
-}
-```
-
-### Get Session
-
-```bash
-GET /api/game/session/:sessionId
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "session": { /* session object */ }
-  }
-}
-```
+**Типы действий:**
+- `attack` - Атаковать врага
+- `spell` - Кастовать стрелу
+- `dodge` - Оронительная стойка
+- `disengage` - Отойдите из боя
+- `hide` - Прячьтесь от врагов
+- `help` - Оказать помощь
 
 ---
 
-## Error Responses
+## Ответы На Ошибки
 
-### 400 - Bad Request
+### 400 - Ошибка Результата
 ```json
 {
   "success": false,
@@ -378,7 +237,7 @@ GET /api/game/session/:sessionId
 }
 ```
 
-### 404 - Not Found
+### 404 - Не Найдено
 ```json
 {
   "success": false,
@@ -386,7 +245,7 @@ GET /api/game/session/:sessionId
 }
 ```
 
-### 500 - Internal Server Error
+### 500 - Ошибка На Сервере
 ```json
 {
   "success": false,
@@ -396,19 +255,19 @@ GET /api/game/session/:sessionId
 
 ---
 
-## Testing with cURL
+## Примеры тестирования
 
-### Health Check
+### Проверка Здоровья
 ```bash
 curl http://localhost:3001/health
 ```
 
-### Get Merged Rules
+### Получить Мерженные Правила
 ```bash
 curl http://localhost:3001/api/rules/merged | jq
 ```
 
-### Create Custom Race
+### На Новую Расу
 ```bash
 curl -X POST http://localhost:3001/api/custom-races \
   -H 'Content-Type: application/json' \
@@ -424,6 +283,6 @@ curl -X POST http://localhost:3001/api/custom-races \
 
 ---
 
-**All endpoints require JSON Content-Type header for POST/PUT requests**
+**Все POST/PUT эндпоинты требуют JSON Content-Type заголовка**
 
-For more examples, see `QUICKSTART.md`
+Для дополнительных примеров, см. `QUICKSTART.md`

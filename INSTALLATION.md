@@ -1,22 +1,22 @@
-# Installation & Setup Guide
+# Как установить и настроить
 
-## Prerequisites
+## Требования
 
-- **Node.js**: Version 18 or higher ([download](https://nodejs.org/))
-- **npm** or **yarn**: Comes with Node.js
-- **OpenAI API Key**: Get from [platform.openai.com](https://platform.openai.com/api-keys)
-- **Git**: For cloning the repository
+- **Node.js**: Версия 18 или выше ([скачать](https://nodejs.org/))
+- **npm** или **yarn**: Приходит с Node.js
+- **OpenAI API ключ**: Получи на [platform.openai.com](https://platform.openai.com/api-keys)
+- **Git**: Для клонирования репо
 
-## Step 1: Clone the Repository
+## Шаг 1: Клонируем репо
 
 ```bash
 git clone https://github.com/shastitko1970-netizen/ai-dnd-game.git
 cd ai-dnd-game
 ```
 
-## Step 2: Install Dependencies
+## Шаг 2: Устанавливаем зависимости
 
-### Option A: Root install (recommended)
+### Вариант A: Прерывиста истановка (рекомендуется)
 
 ```bash
 npm install
@@ -24,181 +24,179 @@ cd frontend && npm install && cd ..
 cd backend && npm install && cd ..
 ```
 
-### Option B: Manual install
+### Вариант B: Отдельная истановка
 
-Frontend:
+Фронтенд:
 ```bash
 cd frontend
 npm install
 cd ..
 ```
 
-Backend:
+Бэкенд:
 ```bash
 cd backend
 npm install
 cd ..
 ```
 
-## Step 3: Configure Environment Variables
+## Шаг 3: Конфигурируем переменные окружения
 
-### Backend Configuration
+### Конфигурация бэкенда
 
-Create `backend/.env`:
+Создай `backend/.env`:
 
 ```bash
-OPENAI_API_KEY=sk-your-api-key-here
+OPENAI_API_KEY=sk-твой-ключ-здесь
 PORT=3001
 NODE_ENV=development
 ```
 
-Replace `sk-your-api-key-here` with your actual OpenAI API key.
+Замени `sk-твой-ключ-здесь` на твой актуальный OpenAI ключ.
 
-### Frontend Configuration
+### Конфигурация фронтенда
 
-Create `frontend/.env.local`:
+Создай `frontend/.env.local`:
 
 ```bash
 NEXT_PUBLIC_API_URL=http://localhost:3001
 NEXT_PUBLIC_ENVIRONMENT=development
 ```
 
-## Step 4: Run the Application
+## Шаг 4: Запускаем приложение
 
-### Terminal 1: Start Backend
+### Терминал 1: Запускаем бэкенд
 
 ```bash
 cd backend
 npm run dev
 ```
 
-You should see:
+Ты должен увидеть:
 ```
-✅ Server running on http://localhost:3001
-📚 Health check: http://localhost:3001/health
-🎯 API: http://localhost:3001/api
+✅ Сервер работает на http://localhost:3001
+📊 Проверка здоровья: http://localhost:3001/health
+📚 API: http://localhost:3001/api
 ```
 
-### Terminal 2: Start Frontend
+### Терминал 2: Запускаем фронтенд
 
 ```bash
 cd frontend
 npm run dev
 ```
 
-You should see:
+Ты должен увидеть:
 ```
-> Local:        http://localhost:3000
+> Локально:        http://localhost:3000
 ```
 
-## Step 5: Open the Game
+## Шаг 5: Открываем игру
 
-Open your browser to **http://localhost:3000**
+Откры в браузере: **http://localhost:3000**
 
-You should see the AI Dungeon Master landing page!
+Ты должен увидеть главную страницу AI Мастера Подземелья!
 
-## Troubleshooting
+## Отключение неполадок
 
-### Port Already in Use
+### Порт уже используется
 
-If port 3000 or 3001 is already in use:
+Esli port 3000 или 3001 уже используется:
 
 ```bash
-# Find process using port
+# Найди процесс
 lsof -i :3000
 lsof -i :3001
 
-# Kill process (replace PID)
+# Килли процесс (замени PID)
 kill -9 <PID>
 ```
 
-### OpenAI API Key Error
+### Ошибка OpenAI API ключа
 
-- Make sure `backend/.env` has the correct API key
-- API key should start with `sk-`
-- Check that your OpenAI account has API credits
+- Убедись что `backend/.env` имеет правильный API ключ
+- Ключ должен начинаться с `sk-`
+- Проверь остаток на аккаунте
 
-### CORS Errors
+### CORS ошибки
 
-Make sure:
-- Backend is running on `http://localhost:3001`
-- Frontend `.env.local` has `NEXT_PUBLIC_API_URL=http://localhost:3001`
-- Backend CORS is enabled (it is by default)
+Обычно, это означает:
+- Бэкенд не работает на `http://localhost:3001`
+- В `frontend/.env.local` неправильный `NEXT_PUBLIC_API_URL`
+- CORS не включен
 
-### Module Not Found Errors
+### Модуль не найден
 
 ```bash
-# Clear node_modules and reinstall
 rm -rf node_modules package-lock.json
 npm install
 ```
 
-## Development Commands
+## Команды разработки
 
-### Backend
+### Бэкенд
 
 ```bash
 cd backend
-npm run dev         # Development with hot reload
-npm run build       # Build for production
-npm run start       # Run compiled version
-npm run type-check  # Check TypeScript types
+npm run dev         # Разработка с hot reload
+npm run build       # Оставить выпуск
+ npm run start       # Оставить конкомпилированную версию
+npm run type-check  # Проверить TypeScript типы
 ```
 
-### Frontend
+### Фронтенд
 
 ```bash
 cd frontend
-npm run dev         # Development
-npm run build       # Build for production
-npm run start       # Run production build
-npm run lint        # Lint code
-npm run type-check  # Check TypeScript types
+npm run dev         # Разработка
+npm run build       # Оставить выпуск
+npm run start       # Запустить production выпуск
+npm run lint        # Опроведать код
+npm run type-check  # Проверить TypeScript типы
 ```
 
-## Project Structure
+## Структура проекта
 
 ```
 ai-dnd-game/
-├── backend/              # Fastify API server
+├── backend/              # Fastify API сервер
 │   ├── src/
-│   │   ├── main.ts      # Entry point
-│   │   ├── routes/      # API endpoints
-│   │   ├── services/    # Business logic
-│   │   ├── types/       # TypeScript types
-│   │   ├── utils/       # Helpers
-│   │   └── data/        # Game data
+│   │   ├── main.ts      # Точка входа
+│   │   ├── routes/      # API эндпоинты
+│   │   ├── services/    # Бизнес-логика
+│   │   ├── types/       # TypeScript типы
+│   │   ├── utils/       # Помощники
+│   │   └── data/        # Гровые данные
 │   ├── package.json
 │   └── tsconfig.json
 │
-├── frontend/             # Next.js app
-│   ├── app/             # Pages
-│   ├── components/      # React components
-│   ├── lib/             # Utilities
-│   ├── public/          # Static files
+├── frontend/             # Next.js приложение
+│   ├── app/             # Страницы
+│   ├── components/      # React компоненты
+│   ├── lib/             # Утилиты
+│   ├── public/          # Статические файлы
 │   ├── package.json
 │   └── tsconfig.json
 │
-├── package.json         # Root config
+├── package.json         # Root конфиг
 ├── README.md
 └── INSTALLATION.md
 ```
 
-## Next Steps
+## Ближайшие шаги
 
-1. **Play the Game**: Start your adventure!
-2. **Create Custom Content**: Make your own races, classes, and feats
-3. **Read the README**: For detailed feature documentation
-4. **Check API Endpoints**: See `README.md` for full API documentation
+1. **Приключаясь в игре**: Начни своё квестовое приключение!
+2. **Создавай пользовательский контент**: Создавай новые расы, классы и особенности
+3. **Прогладывай код**: Пюх README.md для подробных сведений
 
-## Support
+## Поддержка
 
-If you encounter issues:
+Если ты столкнешься с проблемами:
 
-1. Check the error message carefully
-2. Review the logs in terminal
-3. Check this troubleshooting section
-4. Review `.env` files
-5. Make sure all dependencies are installed
+1. Внимательно очитайте сообщение об ошибке
+2. Осмотрите логи в терминале
+3. Открыте этт норму на конденс
+4. Проверьте `.env` файлы
+5. Трохсните все зависимости истановлены
 
-Enjoy your adventure! 🐉
+Наслаждайся игрой! 🐉
