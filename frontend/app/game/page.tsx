@@ -3,18 +3,46 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
+interface DiceRoll {
+  roll: number;
+  modifier: number;
+  total: number;
+  success: boolean;
+  criticalHit: boolean;
+  criticalMiss: boolean;
+}
+
+interface ActionIntent {
+  type: 'combat' | 'skill_check' | 'dialogue' | 'exploration' | 'freeform';
+  skill?: string;
+  difficulty?: number;
+  requiresRoll: boolean;
+}
+
+interface GameResponse {
+  sessionId: string;
+  narrative: string;
+  diceRoll: DiceRoll | null;
+  actionIntent: ActionIntent;
+  nextActions: string[];
+  turn: number;
+}
+
 export default function GamePage() {
   const router = useRouter();
   const [character, setCharacter] = useState<any>(null);
   const [world, setWorld] = useState<any>(null);
+  const [sessionId, setSessionId] = useState<string>('');
   const [narrative, setNarrative] = useState('');
   const [narrativeHistory, setNarrativeHistory] = useState<string[]>([]);
   const [currentActions, setCurrentActions] = useState<string[]>([]);
   const [userInput, setUserInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
-  const [diceRoll, setDiceRoll] = useState<number | null>(null);
+  const [lastDiceRoll, setLastDiceRoll] = useState<DiceRoll | null>(null);
+  const [lastActionIntent, setLastActionIntent] = useState<ActionIntent | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [turn, setTurn] = useState(0);
   const narrativeEndRef = useRef<HTMLDivElement>(null);
 
   // Автоскрол к новым сообщениям
@@ -24,7 +52,7 @@ export default function GamePage() {
     }
   }, [narrative]);
 
-  // Загружаем основные данные
+  // Загружаем основные данные и запускаем игру
   useEffect(() => {
     const char = localStorage.getItem('character');
     const w = localStorage.getItem('selectedWorld');
@@ -42,7 +70,7 @@ export default function GamePage() {
     startNewGame(charData, worldData);
   }, [router]);
 
-  // Начинаем новую игру с AI
+  // 🎬 НАЧИНАЕМ НОВУЮ ИГРУ
   const startNewGame = async (char: any, w: any) => {
     setIsLoading(true);
     setError(null);
@@ -51,126 +79,130 @@ export default function GamePage() {
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/game/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ character: char, world: w }),
+        body: JSON.stringify({ 
+          character: char, 
+          world: w,
+          language: 'ru' // 🆕 Отправляем язык
+        }),
       });
 
       if (!response.ok) {
-        throw new Error('Ошибка начала игры');
+        throw new Error(`Backend error: ${response.status}`);
       }
 
       const data = await response.json();
       
+      if (!data.data || !data.data.sessionId) {
+        throw new Error('No sessionId received from backend');
+      }
+
+      // 🆕 СОХРАНЯЕМ sessionId!
+      setSessionId(data.data.sessionId);
+      console.log(`✅ Session started: ${data.data.sessionId}`);
+      
       setNarrative(data.data.narrative);
       setNarrativeHistory([data.data.narrative]);
-      
-      // Генерируем первоначальные действия
-      setCurrentActions([' Атаковать', '🔍 Осмотреть', '💬 Поговорить', '✨ Попробовать магию']);
+      setCurrentActions(['⚔️ Атаковать', '🔍 Осмотреть', '💬 Поговорить', '✨ Исследовать']);
       setGameStarted(true);
+      setTurn(0);
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'неизвестная ошибка';
-      setError('❌ ' + errorMsg + ' Проверь API ключ OpenAI в backend/.env');
-      console.error(err);
-      // Все равно запускаем игру локально
-      const fallbackNarrative = `Ты оказываешься в сердце мира "${w.name}". Твоё имя - ${char.name}, ${char.race} ${char.class}. Что ты делаешь?`;
-      setNarrative(fallbackNarrative);
-      setNarrativeHistory([fallbackNarrative]);
-      setCurrentActions(['⚔️ Атаковать', '🔍 Осмотреть', '💬 Поговорить', '✨ Попробовать магию']);
-      setGameStarted(true);
+      const errorMsg = err instanceof Error ? err.message : 'unknown error';
+      setError(`❌ Game start failed: ${errorMsg}`);
+      console.error('Game start error:', err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Обрабатываем действие
+  // ⚔️ ОБРАБАТЫВАЕМ ДЕЙСТВИЕ ЧЕРЕЗ ActionOrchestrator
   const handleAction = async (action: string) => {
-    if (isLoading || !character) return;
+    if (isLoading || !character || !sessionId) {
+      if (!sessionId) setError('❌ No active session');
+      return;
+    }
     
     setIsLoading(true);
     setError(null);
     
     try {
-      // Бросаем кости
-      const roll = Math.floor(Math.random() * 20) + 1;
-      setDiceRoll(roll);
-      
-      // Показываем действие игрока
-      const playerActionText = `\n⚔️ **Ты пытаешься:** ${action} (Кубик: ${roll})`;
-      setNarrative(prev => prev + playerActionText);
-      
-      // Попытаемся получить ответ от AI
-      try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/game/action`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action,
-            narrative,
-            character,
-            world,
-            previousActions: currentActions,
-          }),
-        });
+      console.log(`📤 Sending action to backend:`, { sessionId, action });
 
-        if (response.ok) {
-          const data = await response.json();
-          const aiResponse = data.data.response;
-          const nextActions = data.data.nextActions || ['⚔️ Атаковать', '🔍 Осмотреть', '💬 Поговорить'];
-          
-          // Обновляем нарратив с ответом AI
-          setNarrative(prev => prev + '\n\n🎲 **Результат:**\n' + aiResponse);
-          setNarrativeHistory(prev => [...prev, playerActionText, aiResponse]);
-          setCurrentActions(nextActions);
-        } else {
-          // Fallback - локальный ответ
-          throw new Error('API не ответил');
-        }
-      } catch (aiError) {
-        // Если AI не работает, используем локальный генератор
-        const isSuccess = roll > 10;
-        let result = '';
-        
-        if (action.toLowerCase().includes('атак')) {
-          result = isSuccess 
-            ? `✅ Удар попадает! Враг отступает.`
-            : `❌ Промах! Враг уклоняется.`;
-        } else if (action.toLowerCase().includes('говор')) {
-          result = isSuccess
-            ? `✅ Слова находят отклик. НПС слушает внимательно.`
-            : `❌ НПС игнорирует твои слова и смеется.`;
-        } else if (action.toLowerCase().includes('осмотр')) {
-          result = isSuccess
-            ? `✅ Ты замечаешь что-то интересное!`
-            : `❌ Ничего особенного не видно.`;
-        } else {
-          result = isSuccess
-            ? `✅ Действие удается!`
-            : `❌ Что-то идет не так...`;
-        }
-        
-        setNarrative(prev => prev + '\n\n🎲 **Результат:**\n' + result);
-        setCurrentActions(['⚔️ Атаковать', '🔍 Осмотреть', '💬 Поговорить', '✨ Попробовать магию']);
+      // 🎯 ПРАВИЛЬНЫЙ ЗАПРОС К БЭКЕНДУ
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/game/action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,      // 🆕 Обязательный sessionId
+          action,         // Действие игрока
+          language: 'ru'  // 🆕 Язык
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Backend error: ${response.status} - ${response.statusText}`);
       }
+
+      const data = await response.json() as { data: GameResponse };
       
+      if (!data.data) {
+        throw new Error('Invalid response structure from backend');
+      }
+
+      const gameData = data.data;
+
+      // 🎲 ОБНОВЛЯЕМ СОСТОЯНИЕ С ДАННЫМИ БЭКЕНДА
+      setLastDiceRoll(gameData.diceRoll);
+      setLastActionIntent(gameData.actionIntent);
+      setTurn(gameData.turn);
+
+      // 📖 ФОРМИРУЕМ ИСТОРИЮ
+      const playerLine = `\n\n[${character.name}]: ${action}`;
+      const gmLine = `\n[🎲 GM]: ${gameData.narrative}`;
+      
+      // 🎲 ДОБАВЛЯЕМ ИНФОРМАЦИЮ О БРОСКЕ ЕСЛИ БЫЛ
+      let diceInfo = '';
+      if (gameData.diceRoll) {
+        const { roll, modifier, total, success, criticalHit, criticalMiss } = gameData.diceRoll;
+        const resultText = criticalHit ? '✨ КРИТ!' : criticalMiss ? '💥 ФЕЙЛ!' : success ? '✅ Успех' : '❌ Провал';
+        diceInfo = `\n📊 Бросок: d20[${roll}] + ${modifier} = ${total} [${resultText}]`;
+      }
+      const actionTypeInfo = `\n🎯 Тип: ${gameData.actionIntent.type}${gameData.actionIntent.skill ? ` (${gameData.actionIntent.skill})` : ''}`;
+
+      const fullNarrative = narrative + playerLine + diceInfo + actionTypeInfo + gmLine;
+      setNarrative(fullNarrative);
+      setNarrativeHistory(prev => [
+        ...prev,
+        playerLine,
+        diceInfo,
+        actionTypeInfo,
+        gmLine
+      ]);
+      
+      // 🎬 СЛЕДУЮЩИЕ ДЕЙСТВИЯ ИЗ БЭКЕНДА
+      setCurrentActions(gameData.nextActions || ['⚔️ Атаковать', '🔍 Осмотреть', '💬 Поговорить']);
       setUserInput('');
-      setDiceRoll(null);
+
+      console.log(`✅ Action processed:`, gameData);
     } catch (err) {
-      setError('⚠️ ' + (err instanceof Error ? err.message : 'Ошибка'));
-      console.error(err);
+      const errorMsg = err instanceof Error ? err.message : 'unknown error';
+      setError(`⚠️ Action failed: ${errorMsg}`);
+      console.error('Action error:', err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Обрабатываем пользовательский ввод
+  // ✍️ ОБРАБАТЫВАЕМ ПОЛЬЗОВАТЕЛЬСКИЙ ВВОД
   const handleCustomAction = async () => {
     if (!userInput.trim() || isLoading) return;
     await handleAction(userInput);
   };
 
+  // 🎨 РЕНДЕР
   if (!character || !gameStarted) {
     return (
       <div className="text-center py-12 text-slate-300">
-        <p>⏳ Загружаю игру...</p>
+        <p>⏳ Инициализация игровой сессии...</p>
         {error && <p className="text-red-400 mt-2 text-sm">{error}</p>}
       </div>
     );
@@ -179,51 +211,83 @@ export default function GamePage() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Narrative */}
+        {/* 📖 ОСНОВНОЕ ПОВЕСТВОВАНИЕ */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Error Display */}
+          {/* ❌ Ошибки */}
           {error && (
-            <div className="card bg-red-900 border-red-600">
-              <p className="text-red-300 text-sm">{error}</p>
+            <div className="card bg-red-900 border-red-600 border">
+              <p className="text-red-300 text-sm font-mono">{error}</p>
             </div>
           )}
 
-          {/* Narrative Display */}
-          <div className="card h-96 flex flex-col">
-            <h2 className="text-2xl font-bold text-teal-400 mb-4">📖 Повествование</h2>
-            <div className="flex-1 overflow-y-auto text-slate-300 mb-4 p-4 bg-slate-900 rounded whitespace-pre-wrap text-sm leading-relaxed font-mono">
+          {/* 📖 Нарратив */}
+          <div className="card h-96 flex flex-col border border-slate-600">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-teal-400">📖 Повествование</h2>
+              <span className="text-xs text-slate-400">Ход: {turn}</span>
+            </div>
+            <div className="flex-1 overflow-y-auto text-slate-300 mb-4 p-4 bg-slate-900 rounded whitespace-pre-wrap text-sm leading-relaxed font-mono border border-slate-700">
               {narrative}
               <div ref={narrativeEndRef} />
             </div>
           </div>
 
-          {/* Dice Roll Display */}
-          {diceRoll !== null && (
-            <div className="card bg-gradient-to-r from-orange-900 to-red-900 border-orange-500">
-              <p className="text-center text-3xl font-bold text-yellow-300">🎲 {diceRoll} / 20</p>
-              <p className="text-center text-sm text-orange-200 mt-2 font-bold">
-                {diceRoll > 15 ? '✨ Критический успех!' : diceRoll > 10 ? '✅ Успех!' : '❌ Неудача!'}
+          {/* 🎲 Последний бросок */}
+          {lastDiceRoll && (
+            <div className="card bg-gradient-to-r from-orange-900 to-red-900 border-orange-500 border">
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <p className="text-2xl font-bold text-yellow-300">{lastDiceRoll.roll}</p>
+                  <p className="text-xs text-orange-200">d20</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-yellow-300">+{lastDiceRoll.modifier}</p>
+                  <p className="text-xs text-orange-200">модификатор</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-yellow-300">{lastDiceRoll.total}</p>
+                  <p className="text-xs text-orange-200">итого</p>
+                </div>
+              </div>
+              <div className="mt-3 pt-3 border-t border-orange-700 text-center">
+                <p className="text-sm font-bold text-yellow-300">
+                  {lastDiceRoll.criticalHit ? '✨ КРИТИЧЕСКИЙ УСПЕХ!' : lastDiceRoll.criticalMiss ? '💥 КРИТИЧЕСКИЙ ПРОВАЛ!' : lastDiceRoll.success ? '✅ Успех' : '❌ Провал'}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* 🎯 Тип действия */}
+          {lastActionIntent && (
+            <div className="card border border-slate-600 bg-slate-800">
+              <p className="text-sm text-slate-300">
+                <strong>🎯 Тип действия:</strong> <span className="text-teal-300 font-mono">{lastActionIntent.type}</span>
+                {lastActionIntent.skill && <span className="text-slate-400"> • Навык: <strong>{lastActionIntent.skill}</strong></span>}
+                {lastActionIntent.difficulty && <span className="text-slate-400"> • DC: <strong>{lastActionIntent.difficulty}</strong></span>}
+              </p>
+              <p className="text-xs text-slate-500 mt-2">
+                {lastActionIntent.requiresRoll ? '🎲 Требует броска' : '📝 Без броска'}
               </p>
             </div>
           )}
 
-          {/* Action Buttons */}
-          <div className="card">
-            <p className="text-slate-300 mb-4 font-semibold">⚔️ Выберите действие или напишите своё:</p>
+          {/* ⚔️ КНОПКИ ДЕЙСТВИЙ */}
+          <div className="card border border-slate-600">
+            <p className="text-slate-300 mb-4 font-semibold">⚔️ Выберите действие:</p>
             <div className="flex gap-2 flex-wrap mb-4">
               {currentActions.map((action, idx) => (
                 <button
                   key={idx}
                   onClick={() => handleAction(action)}
                   disabled={isLoading}
-                  className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                  className="px-3 py-2 rounded bg-teal-600 hover:bg-teal-500 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed text-sm transition-colors"
                 >
                   {action}
                 </button>
               ))}
             </div>
 
-            {/* Custom Action Input */}
+            {/* ✏️ ПОЛЬЗОВАТЕЛЬСКИЙ ВВОД */}
             <div className="space-y-2">
               <label className="block text-slate-300 text-sm font-semibold">✏️ Собственный ход:</label>
               <div className="flex gap-2">
@@ -232,26 +296,27 @@ export default function GamePage() {
                   value={userInput}
                   onChange={(e) => setUserInput(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleCustomAction()}
-                  placeholder="Напр: Попытаться залезть на дерево, Переговорить с драконом..."
+                  placeholder="Напр: Попытаться залезть на дерево, Атаковать дракона мечом..."
                   disabled={isLoading}
-                  className="flex-1 disabled:opacity-50 text-sm"
+                  className="flex-1 px-3 py-2 rounded bg-slate-800 border border-slate-600 text-slate-200 placeholder-slate-500 disabled:opacity-50 text-sm focus:border-teal-500 focus:outline-none"
                 />
                 <button
                   onClick={handleCustomAction}
                   disabled={isLoading || !userInput.trim()}
-                  className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                  className="px-4 py-2 rounded bg-teal-600 hover:bg-teal-500 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap transition-colors"
                 >
                   ✓ OK
                 </button>
               </div>
-              <p className="text-xs text-slate-400">Или нажми Enter</p>
+              <p className="text-xs text-slate-400">или нажми Enter</p>
             </div>
           </div>
         </div>
 
-        {/* Character Sheet */}
+        {/* 👤 ПЕРСОНАЖ И ИНФОРМАЦИЯ */}
         <div>
-          <div className="card sticky top-4">
+          {/* 👤 ПЕРСОНАЖ */}
+          <div className="card sticky top-4 border border-slate-600 mb-6">
             <h3 className="text-xl font-bold text-teal-400 mb-4">👤 Персонаж</h3>
             <div className="space-y-3 text-sm text-slate-300">
               <div className="border-b border-slate-700 pb-3">
@@ -259,6 +324,7 @@ export default function GamePage() {
                 <p><strong>🧝 Раса:</strong> {character.race}</p>
                 <p><strong>⚔️ Класс:</strong> {character.class}</p>
                 <p><strong>📊 Уровень:</strong> {character.level || 1}</p>
+                {character.alignment && <p><strong>⚖️ Мировоззрение:</strong> {character.alignment}</p>}
               </div>
               
               <div className="border-b border-slate-700 pb-3">
@@ -267,23 +333,49 @@ export default function GamePage() {
                 <p><strong>⚡ Инициатива:</strong> {character.initiative || 0}</p>
               </div>
 
-              <div>
-                <h4 className="font-bold text-teal-300 mb-2">🗺️ Мир:</h4>
-                <p className="font-semibold">{world?.name}</p>
-                <p className="text-xs text-slate-400 mt-1">Сложность: {world?.difficulty}</p>
+              {character.traits && character.traits.length > 0 && (
+                <div className="border-b border-slate-700 pb-3">
+                  <p><strong>🎭 Черты:</strong></p>
+                  <ul className="list-disc list-inside text-xs text-slate-400 mt-1">
+                    {character.traits.map((trait: string, i: number) => (
+                      <li key={i}>{trait}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <div className="border-b border-slate-700 pb-3">
+                <h4 className="font-bold text-teal-300 mb-2">🗺️ Мир</h4>
+                <p className="font-semibold text-teal-200">{world?.name}</p>
+                <p className="text-xs text-slate-400 mt-1">Сложность: <strong>{world?.difficulty || 'Normal'}</strong></p>
+                {world?.description && (
+                  <p className="text-xs text-slate-500 mt-2 italic">{world.description}</p>
+                )}
               </div>
             </div>
 
+            {/* КНОПКА ВЫХОДА */}
             <button
               onClick={() => {
                 localStorage.removeItem('character');
                 localStorage.removeItem('selectedWorld');
                 router.push('/world-select');
               }}
-              className="btn btn-secondary w-full mt-6 text-sm"
+              className="w-full mt-6 px-4 py-2 rounded bg-slate-700 hover:bg-slate-600 text-slate-200 font-semibold text-sm transition-colors"
             >
               ↩️ Вернуться к мирам
             </button>
+          </div>
+
+          {/* 📊 ИНФОРМАЦИЯ О СЕССИИ */}
+          <div className="card border border-slate-600">
+            <h4 className="text-sm font-bold text-teal-400 mb-3">📊 Сессия</h4>
+            <div className="space-y-2 text-xs text-slate-400 font-mono">
+              <p><strong>ID:</strong></p>
+              <p className="text-slate-500 break-all">{sessionId}</p>
+              <p className="mt-2"><strong>Ход:</strong> {turn}</p>
+              <p><strong>Статус:</strong> {isLoading ? '⏳ Обработка...' : '✅ Активна'}</p>
+            </div>
           </div>
         </div>
       </div>
