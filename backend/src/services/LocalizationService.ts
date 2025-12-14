@@ -109,7 +109,7 @@ const classTranslations: TranslationMap = {
   // Core classes
   'Barbarian': 'Варвар',
   'Bard': 'Бард',
-  'Cleric': 'Клирик',
+  'Cleric': 'Жрец',
   'Druid': 'Друид',
   'Fighter': 'Боец',
   'Monk': 'Монах',
@@ -135,6 +135,8 @@ const classAliases: TranslationMap = {
   'бард': 'Bard',
   'Клирик': 'Cleric',
   'клирик': 'Cleric',
+  'Жрец': 'Cleric',
+  'жрец': 'Cleric',
   'Друид': 'Druid',
   'друид': 'Druid',
   'Боец': 'Fighter',
@@ -151,8 +153,16 @@ const classAliases: TranslationMap = {
   'чародей': 'Sorcerer',
   'Волшебник': 'Warlock',
   'волшебник': 'Warlock',
+  'Колдун': 'Warlock',
+  'колдун': 'Warlock',
   'Маг': 'Wizard',
   'маг': 'Wizard',
+  'Мастеромех': 'Artificer',
+  'мастеромех': 'Artificer',
+  'Охотник Крови': 'Blood Hunter',
+  'охотник крови': 'Blood Hunter',
+  'Мистик': 'Mystic',
+  'мистик': 'Mystic',
 };
 
 const abilityTranslations: TranslationMap = {
