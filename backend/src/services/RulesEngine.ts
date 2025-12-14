@@ -1,8 +1,13 @@
+import fs from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { CustomContent, MergedRules, Character, Spell } from '../types/index.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * Core D&D 5e Rules Engine
- * Merges core rules with custom content and provides game mechanics
+ * Loads official rules from dnd-5e-rules.json and merges with custom content
  */
 export class RulesEngine {
   private coreRules: any;
@@ -10,27 +15,11 @@ export class RulesEngine {
   private mergedRules: MergedRules;
 
   constructor(customContent: CustomContent = {}) {
-    // Initialize with default core rules structure
+    this.customContent = customContent;
     this.coreRules = {
-      races: {
-        'Human': { name: 'Human', size: 'Medium', speed: 30, abilityBonus: { STR: 0, DEX: 0, CON: 0, INT: 0, WIS: 0, CHA: 0 }, features: ['Versatile'] },
-        'Elf': { name: 'Elf', size: 'Medium', speed: 30, abilityBonus: { DEX: 2 }, features: ['Darkvision', 'Keen Senses'] },
-        'Dwarf': { name: 'Dwarf', size: 'Medium', speed: 25, abilityBonus: { CON: 2, WIS: 0 }, features: ['Darkvision', 'Stone Cunning'] },
-        'Halfling': { name: 'Halfling', size: 'Small', speed: 25, abilityBonus: { DEX: 2 }, features: ['Lucky', 'Brave'] }
-      },
-      classes: {
-        'Barbarian': { name: 'Barbarian', hitDice: 12, primaryAbility: 'STR', features: ['Rage', 'Unarmored Defense'] },
-        'Bard': { name: 'Bard', hitDice: 8, primaryAbility: 'CHA', features: ['Spellcasting', 'Bardic Inspiration'] },
-        'Cleric': { name: 'Cleric', hitDice: 8, primaryAbility: 'WIS', features: ['Spellcasting', 'Channel Divinity'] },
-        'Fighter': { name: 'Fighter', hitDice: 10, primaryAbility: 'STR', features: ['Fighting Style', 'Second Wind'] },
-        'Rogue': { name: 'Rogue', hitDice: 8, primaryAbility: 'DEX', features: ['Expertise', 'Sneak Attack'] },
-        'Wizard': { name: 'Wizard', hitDice: 6, primaryAbility: 'INT', features: ['Spellcasting', 'Spellbook'] }
-      },
-      feats: {
-        'Alert': { name: 'Alert', description: 'Always in initiative as if in combat' },
-        'Athlete': { name: 'Athlete', description: 'Improved athleticism' },
-        'Great Weapon Master': { name: 'Great Weapon Master', description: '+5 bonus to attack rolls' }
-      },
+      races: {},
+      classes: {},
+      feats: {},
       spells: {},
       monsters: {},
       skills: {},
@@ -44,8 +33,60 @@ export class RulesEngine {
         }
       }
     };
-    this.customContent = customContent;
-    this.mergeRules();
+    this.mergedRules = { races: {}, classes: {}, feats: {}, spells: {}, monsters: {}, skills: {}, conditions: {}, mechanics: {}, equipment: {} };
+  }
+
+  /**
+   * Load official rules from dnd-5e-rules.json
+   */
+  async loadCoreRules(): Promise<void> {
+    try {
+      const filePath = path.join(__dirname, '..', '..', 'data', 'dnd-5e-rules.json');
+      const raw = await fs.readFile(filePath, 'utf-8');
+      const data = JSON.parse(raw);
+
+      // Load races from JSON
+      if (data.races) {
+        this.coreRules.races = data.races;
+      }
+
+      // Load classes from JSON
+      if (data.classes) {
+        this.coreRules.classes = data.classes;
+      }
+
+      // Load feats (if available)
+      if (data.feats) {
+        this.coreRules.feats = data.feats;
+      }
+
+      // Load spells sample
+      if (data.spells_sample) {
+        this.coreRules.spells = data.spells_sample;
+      }
+
+      // Load monsters sample
+      if (data.monsters_sample) {
+        this.coreRules.monsters = data.monsters_sample;
+      }
+
+      // Load skills
+      if (data.skills) {
+        this.coreRules.skills = data.skills;
+      }
+
+      // Load conditions
+      if (data.conditions) {
+        this.coreRules.conditions = data.conditions;
+      }
+
+      console.log(`✅ Core rules loaded: ${Object.keys(this.coreRules.races).length} races, ${Object.keys(this.coreRules.classes).length} classes`);
+      this.mergeRules();
+    } catch (error) {
+      console.error('⚠️ Error loading core rules from JSON:', error);
+      // Fallback to empty but valid structure
+      this.mergeRules();
+    }
   }
 
   /**
@@ -94,6 +135,14 @@ export class RulesEngine {
     return this.mergedRules.feats[name] || null;
   }
 
+  getAllRaces(): any[] {
+    return Object.values(this.mergedRules.races);
+  }
+
+  getAllClasses(): any[] {
+    return Object.values(this.mergedRules.classes);
+  }
+
   calculateModifier(score: number): number {
     return Math.floor((score - 10) / 2);
   }
@@ -117,7 +166,6 @@ export class RulesEngine {
   }
 
   getSpell(name: string): Spell | null {
-    // Simplified spell lookup
     return null;
   }
 
