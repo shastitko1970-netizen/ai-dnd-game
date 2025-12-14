@@ -1,8 +1,9 @@
-// routes/game.ts - D&D Game Routes с интеграцией PromptService и расширенным контекстом
+// routes/game.ts - D&D Game Routes с интеграцией ActionOrchestrator
 
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { GameManager } from '../services/GameManager.js';
 import { AIService } from '../services/AIService.js';
+import ActionOrchestrator from '../services/ActionOrchestrator.js';
 import PromptService, { type GameContext } from '../services/PromptService.js';
 import type { Character, World, GameSession } from '../types/index.js';
 
@@ -90,7 +91,7 @@ export async function gameRoutes(server: FastifyInstance) {
 
   /**
    * POST /game/action
-   * Обработать действие игрока
+   * Обработать действие игрока ЧЕРЕЗ ActionOrchestrator
    */
   server.post<{ Body: { sessionId: string; action: string; language?: 'ru' | 'en' } }>(
     '/action',
@@ -116,8 +117,10 @@ export async function gameRoutes(server: FastifyInstance) {
           sessionDuration: Math.floor((Date.now() - session.startTime.getTime()) / 60000),
         };
 
-        // Генерируем ответ AI GM
-        const response = await AIService.generateActionResponse(
+        console.log(`\n🎉 Обработка действия через ActionOrchestrator...`);
+
+        // Обрабатываем действие ЧЕРЕЗ ORCHESTRATOR
+        const actionResult = await ActionOrchestrator.processAction(
           action,
           session.character,
           session.world,
@@ -125,30 +128,38 @@ export async function gameRoutes(server: FastifyInstance) {
           language
         );
 
-        // Генерируем следующие возможные действия
-        const nextActions = await AIService.generateNextActions(
-          session.character,
-          session.world,
-          gameContext,
-          language
-        );
-
-        // Обновляем историю
-        session.narrativeHistory += `\n\n[${session.character.name}]: ${action}\n[GM]: ${response}`;
+        // Обновляем сессию с информацией о броске
+        session.narrativeHistory += `\n\n[🎯 GM анализ: ${actionResult.intent.type}${actionResult.diceResult ? ` | 🎲 ${actionResult.diceResult.total}` : ''}]\n[${session.character.name}]: ${action}\n[GM]: ${actionResult.narrative}`;
         session.lastAction = action;
         session.turn++;
 
         // Сохраняем обновлённую сессию
         activeSessions.set(sessionId, session);
 
-        console.log(`✅ Действие обработано в сессии ${sessionId}`);
+        console.log(`✅ Действие успешно обработано`);
 
         return reply.send({
           success: true,
           data: {
             sessionId,
-            narrative: response,
-            nextActions,
+            narrative: actionResult.narrative,
+            diceRoll: actionResult.diceResult
+              ? {
+                  roll: actionResult.diceResult.roll,
+                  modifier: actionResult.diceResult.modifier,
+                  total: actionResult.diceResult.total,
+                  success: actionResult.diceResult.success,
+                  criticalHit: actionResult.diceResult.criticalHit,
+                  criticalMiss: actionResult.diceResult.criticalMiss,
+                }
+              : null,
+            actionIntent: {
+              type: actionResult.intent.type,
+              skill: actionResult.intent.skill,
+              difficulty: actionResult.intent.difficulty,
+              requiresRoll: actionResult.intent.requiresRoll,
+            },
+            nextActions: actionResult.suggestedActions,
             turn: session.turn,
             timestamp: new Date().toISOString(),
           },
