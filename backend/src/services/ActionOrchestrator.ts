@@ -1,111 +1,133 @@
-// ActionOrchestrator.ts - Умный анализ и обработка действий игрока
+// ActionOrchestrator.ts - Intelligent action analysis and processing with D&D 5e mechanics
 
 import type { Character, World } from '../types/index.js';
 import PromptService, { type GameContext } from './PromptService.js';
 import { AIService } from './AIService.js';
+import { AbilityScoreService } from './AbilityScoreService.js';
 
 /**
- * Тип действия, определённый AI
+ * Action type determined by AI
  */
 export type ActionType = 'combat' | 'skill_check' | 'dialogue' | 'exploration' | 'freeform';
 
 /**
- * Результат анализа намерения
+ * Skill mapping to ability scores
+ */
+const SKILL_ABILITY_MAP: { [key: string]: keyof typeof CHARACTER_ABILITIES } = {
+  'Athletics': 'STR',
+  'Acrobatics': 'DEX',
+  'Stealth': 'DEX',
+  'Sleight of Hand': 'DEX',
+  'Perception': 'WIS',
+  'Insight': 'WIS',
+  'Medicine': 'WIS',
+  'Animal Handling': 'WIS',
+  'Survival': 'WIS',
+  'Arcana': 'INT',
+  'History': 'INT',
+  'Investigation': 'INT',
+  'Nature': 'INT',
+  'Religion': 'INT',
+  'Deception': 'CHA',
+  'Intimidation': 'CHA',
+  'Performance': 'CHA',
+  'Persuasion': 'CHA',
+};
+
+const CHARACTER_ABILITIES = {
+  STR: 'Strength',
+  DEX: 'Dexterity',
+  CON: 'Constitution',
+  INT: 'Intelligence',
+  WIS: 'Wisdom',
+  CHA: 'Charisma',
+};
+
+/**
+ * Analysis of player intent
  */
 export interface ActionIntent {
   type: ActionType;
   skill?: string; // Athletics, Stealth, Perception, Persuasion, etc.
+  ability?: string; // Underlying ability for this action
   difficulty?: number; // DC 10, 15, 20, 25
-  targetAC?: number; // Для атак
+  targetAC?: number; // For attacks
   requiresRoll: boolean;
-  reasoning: string; // Почему AI выбрал этот тип
+  reasoning: string; // Why AI chose this type
 }
 
 /**
- * Результат броска кубика
+ * Dice roll result
  */
 export interface DiceResult {
   roll: number; // d20
-  modifier: number; // Модификатор от персонажа
+  abilityMod: number; // Modifier from character's ability
+  profBonus: number; // Proficiency bonus (if any)
+  modifier: number; // abilityMod + profBonus
   total: number; // roll + modifier
-  success: boolean;
-  margin: number; // Разница между total и DC
+  success: boolean; // total >= difficulty
+  margin: number; // total - difficulty
   criticalHit: boolean; // 20
   criticalMiss: boolean; // 1
 }
 
 /**
- * Финальный результат обработки действия
+ * Final action processing result
  */
 export interface ActionResult {
   intent: ActionIntent;
   diceResult?: DiceResult;
   narrative: string;
   suggestedActions: string[];
+  npcInfluence?: string; // How personality influenced NPC response
+  relationshipChanged?: boolean; // If relationships evolved
 }
 
-// Таблица переводов для локализации
-const TRANSLATIONS: { [key: string]: { [key: string]: string } } = {
-  ru: {
-    'Damphir': 'Дампир',
-    'Necromancer': 'Некромант',
-    'Paladin': 'Паладин',
-    'Rogue': 'Разбойник',
-    'Fighter': 'Воин',
-    'Wizard': 'Волшебник',
-    'Barbarian': 'Варвар',
-    'Bard': 'Бард',
-    'Cleric': 'Священник',
-    'Druid': 'Друид',
-    'Monk': 'Монах',
-    'Ranger': 'Рейнджер',
-    'Sorcerer': 'Чародей',
-    'Warlock': 'Колдун',
-    'Elf': 'Эльф',
-    'Human': 'Человек',
-    'Dwarf': 'Гном',
-    'Halfling': 'Полурослик',
-    'Dragonborn': 'Драконорожденный',
-    'Half-Elf': 'Полуэльф',
-    'Half-Orc': 'Полуорк',
-    'Tiefling': 'Тифлинг',
-  },
-  en: {},
-};
+/**
+ * NPC relationship state
+ */
+export interface NPCRelationship {
+  name: string;
+  attitude: 'hostile' | 'indifferent' | 'friendly' | 'devoted';
+  points: number; // -100 to +100
+  lastInteraction: string;
+}
 
 export class ActionOrchestrator {
   /**
-   * Локализация текста - заменяет английские слова на нужный язык
+   * Localize text by replacing English class/race names
    */
   private static sanitizeForLanguage(text: string, language: 'ru' | 'en'): string {
     if (language === 'en') return text;
-
+    
+    const translations: { [key: string]: string } = {
+      'Barbarian': 'Варвар',
+      'Bard': 'Бард',
+      'Cleric': 'Священник',
+      'Druid': 'Друид',
+      'Fighter': 'Воин',
+      'Monk': 'Монах',
+      'Paladin': 'Паладин',
+      'Ranger': 'Рейнджер',
+      'Rogue': 'Разбойник',
+      'Sorcerer': 'Чародей',
+      'Warlock': 'Колдун',
+      'Wizard': 'Волшебник',
+    };
+    
     let result = text;
-    const langMap = TRANSLATIONS[language] || {};
-
-    Object.entries(langMap).forEach(([en, translated]) => {
-      const regex = new RegExp(`\\b${en}\\b`, 'gi');
-      result = result.replace(regex, translated);
+    Object.entries(translations).forEach(([en, ru]) => {
+      result = result.replace(new RegExp(`\\b${en}\\b`, 'g'), ru);
     });
-
     return result;
   }
 
   /**
-   * Форматирует текст действия - добавляет пробелы, убирает camelCase
+   * Format action text - remove camelCase, add spaces
    */
   private static formatActionText(action: string): string {
-    // 1. Убираем двойные пробелы
     let formatted = action.replace(/\s+/g, ' ').trim();
-
-    // 2. Проверяем что есть пробелы между словами
-    if (formatted.length > 0 && !formatted.includes(' ')) {
-      // Если одно слово - ОК
-      return formatted;
-    }
-
-    // 3. Если слова слиплись (camelCase), разделяем
-    // "войтиВТаверну" -> "войти в таверну"
+    
     if (!/\s/.test(formatted) && /[a-z][A-Z]/.test(formatted)) {
       formatted = formatted
         .replace(/([a-z])([A-Z])/g, '$1 $2')
@@ -116,7 +138,42 @@ export class ActionOrchestrator {
   }
 
   /**
-   * ШАГИ 1-3 ВМЕСТЕ: Полная обработка действия
+   * Get modifier for a skill based on character's ability scores
+   */
+  private static getSkillModifier(character: Character, skill: string): number {
+    const abilityKey = SKILL_ABILITY_MAP[skill];
+    
+    if (!abilityKey) {
+      console.warn(`Unknown skill: ${skill}`);
+      return 0;
+    }
+
+    const ability = character.abilities[abilityKey] || 10;
+    const abilityMod = Math.floor((ability - 10) / 2);
+    
+    // Check if character has proficiency in this skill
+    let profBonus = 0;
+    if (character.skills && character.skills[skill]) {
+      const skillBonus = character.skills[skill].bonus || 0;
+      profBonus = Math.max(0, skillBonus - abilityMod);
+    }
+
+    return abilityMod + profBonus;
+  }
+
+  /**
+   * Get proficiency bonus based on character level
+   */
+  private static getProficiencyBonus(level: number): number {
+    if (level < 5) return 2;
+    if (level < 9) return 2;
+    if (level < 13) return 3;
+    if (level < 17) return 3;
+    return 4;
+  }
+
+  /**
+   * MAIN: Process action completely
    */
   static async processAction(
     action: string,
@@ -125,29 +182,35 @@ export class ActionOrchestrator {
     context: GameContext,
     language: 'ru' | 'en' = 'ru'
   ): Promise<ActionResult> {
-    console.log(`🎯 Обработка действия: "${action.substring(0, 50)}..."`);
+    console.log(`🎯 Processing action: "${action.substring(0, 50)}..."`);
 
-    // STEP 1: Анализ намерения
+    // STEP 1: Analyze intent
     const intent = await this.analyzeIntent(action, character, language);
-    console.log(`📊 Тип действия: ${intent.type} (requiresRoll: ${intent.requiresRoll})`);
+    console.log(`📊 Action type: ${intent.type}${intent.skill ? ` (${intent.skill})` : ''}`);
 
-    // STEP 2: Бросок кубика (если нужен)
+    // STEP 2: Roll dice if needed
     let diceResult: DiceResult | undefined;
     if (intent.requiresRoll) {
       diceResult = this.rollDice(character, intent);
       const resultText = diceResult.criticalHit
-        ? '🎲 КРИТ УСПЕХ!'
+        ? 'CRITICAL HIT!'
         : diceResult.criticalMiss
-          ? '💥 КРИТ ПРОВАЛ!'
+          ? 'CRITICAL MISS!'
           : diceResult.success
-            ? '✅ УСПЕХ'
-            : '❌ ПРОВАЛ';
-      console.log(`${resultText} | Roll: ${diceResult.roll} + ${diceResult.modifier} = ${diceResult.total}`);
-    } else {
-      console.log('⏭️  Бросок кубика не требуется');
+            ? 'SUCCESS'
+            : 'FAILURE';
+      console.log(`${resultText} | Roll: d20[${diceResult.roll}] + ${diceResult.modifier} = ${diceResult.total}`);
     }
 
-    // STEP 3: Генерация нарратива с учётом результата
+    // STEP 3: Analyze personality influence on NPCs
+    const personalityInfluence = this.analyzePersonalityInfluence(
+      character,
+      intent,
+      diceResult
+    );
+    console.log(`💭 Personality influence: ${personalityInfluence}`);
+
+    // STEP 4: Generate narrative
     const narrative = await this.generateNarrative(
       action,
       character,
@@ -155,10 +218,22 @@ export class ActionOrchestrator {
       context,
       intent,
       diceResult,
+      personalityInfluence,
       language
     );
 
-    // Генерируем следующие действия
+    // STEP 5: Evolve relationships if dialogue/interaction
+    let relationshipChanged = false;
+    if (intent.type === 'dialogue' && diceResult) {
+      relationshipChanged = this.evolveRelationships(
+        character,
+        context,
+        diceResult.success,
+        character.personality?.ideals || ''
+      );
+    }
+
+    // Get next actions
     let suggestedActions = await AIService.generateNextActions(
       character,
       world,
@@ -166,9 +241,8 @@ export class ActionOrchestrator {
       language
     );
 
-    // Форматируем и локализуем все действия
-    suggestedActions = suggestedActions.map(action => {
-      let formatted = this.formatActionText(action);
+    suggestedActions = suggestedActions.map(a => {
+      let formatted = this.formatActionText(a);
       formatted = this.sanitizeForLanguage(formatted, language);
       return formatted;
     });
@@ -178,11 +252,13 @@ export class ActionOrchestrator {
       diceResult,
       narrative,
       suggestedActions,
+      npcInfluence: personalityInfluence,
+      relationshipChanged,
     };
   }
 
   /**
-   * STEP 1: AI анализирует намерение игрока
+   * STEP 1: Analyze player intent
    */
   private static async analyzeIntent(
     action: string,
@@ -190,94 +266,125 @@ export class ActionOrchestrator {
     language: 'ru' | 'en'
   ): Promise<ActionIntent> {
     const systemPrompt = language === 'ru'
-      ? `Ты - анализатор действий игрока в D&D 5e.
-
-Анализируй действие и верни ТОЛЬКО JSON (без markdown, без объяснений):
-{
+      ? `Ты анализатор действий в D&D 5e. Верни ТОЛЬКО JSON:\n{
   "type": "combat" | "skill_check" | "dialogue" | "exploration" | "freeform",
-  "skill": null | "Athletics" | "Acrobatics" | "Stealth" | "Perception" | "Insight" | "Persuasion" | "Deception" | "Arcana" | "Nature" | "Medicine" | "Investigation",
-  "difficulty": null | 10 | 12 | 15 | 18 | 20 | 25,
+  "skill": null | "Athletics" | "Stealth" | "Perception" | "Persuasion" | "Deception" | "Insight" | "Investigation",
+  "difficulty": null | 10 | 15 | 20 | 25,
   "requiresRoll": true | false,
-  "reasoning": "Краткое объяснение"
+  "reasoning": "Объяснение"
 }`
-      : `You are a D&D 5e action analyzer.
-
-Analyze the action and return ONLY JSON (no markdown):
-{
+      : `Analyze D&D 5e action. Return ONLY JSON:\n{
   "type": "combat" | "skill_check" | "dialogue" | "exploration" | "freeform",
   "skill": null | "Athletics" | "Stealth" | "Perception" | "Persuasion" | ...,
   "difficulty": null | 10 | 15 | 20,
   "requiresRoll": true | false,
-  "reasoning": "Brief explanation"
+  "reasoning": "Explanation"
 }`;
 
     const userPrompt = language === 'ru'
-      ? `Персонаж: ${character.name} (${character.class}), Уровень: ${character.level}
-Действие: "${action}"
-
-Какой это тип действия и нужен ли бросок кубика?`
-      : `Character: ${character.name} (${character.class}), Level: ${character.level}
-Action: "${action}"
-
-What type of action is this and does it require a dice roll?`;
+      ? `${character.name} (${character.class}, Level ${character.level}), Personality: ${character.personality?.traits || 'neutral'}\nAction: "${action}"`
+      : `${character.name} (${character.class}, Level ${character.level}), Personality: ${character.personality?.traits || 'neutral'}\nAction: "${action}"`;
 
     try {
       const response = await AIService.analyzeAction(systemPrompt, userPrompt);
       const parsed = JSON.parse(response);
 
+      const ability = parsed.skill ? SKILL_ABILITY_MAP[parsed.skill] : undefined;
+
       return {
         type: parsed.type || 'freeform',
         skill: parsed.skill || undefined,
+        ability: ability || undefined,
         difficulty: parsed.difficulty || undefined,
         requiresRoll: parsed.requiresRoll === true,
         reasoning: parsed.reasoning || 'Automated analysis',
       };
     } catch (error) {
-      console.warn('⚠️  Не могу распарсить анализ, используется freeform');
+      console.warn('⚠️ Parse error, using freeform');
       return {
         type: 'freeform',
         requiresRoll: false,
-        reasoning: 'Parse error, defaulting to freeform',
+        reasoning: 'Parse error',
       };
     }
   }
 
   /**
-   * STEP 2: Бросок кубика d20 + модификаторы
+   * STEP 2: Roll d20 + ability modifiers
    */
   private static rollDice(character: Character, intent: ActionIntent): DiceResult {
-    // Бросок d20 (1-20)
     const roll = Math.floor(Math.random() * 20) + 1;
 
-    // Получаем модификатор из навыка персонажа
-    let modifier = 0;
-    if (intent.skill && character.skills[intent.skill]) {
-      modifier = character.skills[intent.skill].bonus;
+    let abilityMod = 0;
+    let profBonus = 0;
+
+    if (intent.skill) {
+      abilityMod = this.getSkillModifier(character, intent.skill);
     } else if (intent.type === 'combat') {
-      // Для боя используем DEX или STR
       const dexMod = Math.floor((character.abilities.DEX - 10) / 2);
       const strMod = Math.floor((character.abilities.STR - 10) / 2);
-      modifier = Math.max(dexMod, strMod);
+      abilityMod = Math.max(dexMod, strMod);
+      profBonus = this.getProficiencyBonus(character.level || 1);
     }
 
+    const modifier = abilityMod + profBonus;
     const total = roll + modifier;
     const difficulty = intent.difficulty || 10;
     const success = total >= difficulty;
-    const margin = total - difficulty;
 
     return {
       roll,
+      abilityMod,
+      profBonus,
       modifier,
       total,
       success,
-      margin,
+      margin: total - difficulty,
       criticalHit: roll === 20,
       criticalMiss: roll === 1,
     };
   }
 
   /**
-   * STEP 3: Генерация нарратива с учётом броска
+   * STEP 3: Analyze how personality influences NPC reactions
+   */
+  private static analyzePersonalityInfluence(
+    character: Character,
+    intent: ActionIntent,
+    diceResult?: DiceResult
+  ): string {
+    if (intent.type !== 'dialogue') {
+      return 'No NPC interaction';
+    }
+
+    const personality = character.personality?.traits || 'neutral';
+    const ideals = character.personality?.ideals || 'survival';
+    const charisma = Math.floor((character.abilities.CHA - 10) / 2);
+
+    // Personality affects persuasion effectiveness
+    if (personality.toLowerCase().includes('charm')) {
+      return 'Charming personality: NPCs are more receptive (CHA bonus applies)';
+    }
+    if (personality.toLowerCase().includes('intimidat')) {
+      return 'Intimidating demeanor: NPCs respect strength (STR can apply)';
+    }
+    if (personality.toLowerCase().includes('deceptive')) {
+      return 'Deceptive nature: NPCs may be fooled but trust is hard to earn';
+    }
+
+    // Ideals affect NPC responses
+    if (ideals.toLowerCase().includes('justice')) {
+      return 'Idealistic about justice: Lawful NPCs are more helpful';
+    }
+    if (ideals.toLowerCase().includes('freedom')) {
+      return 'Values freedom: Chaotic NPCs respect this character';
+    }
+
+    return `CHA modifier ${charisma >= 0 ? '+' : ''}${charisma} affects persuasion`;
+  }
+
+  /**
+   * STEP 4: Generate narrative with ability modifiers noted
    */
   private static async generateNarrative(
     action: string,
@@ -286,36 +393,33 @@ What type of action is this and does it require a dice roll?`;
     context: GameContext,
     intent: ActionIntent,
     diceResult: DiceResult | undefined,
+    personalityInfluence: string,
     language: 'ru' | 'en'
   ): Promise<string> {
     let enhancedAction = action;
 
-    // Добавляем информацию о броске в контекст для AI
     if (diceResult) {
+      const abilityName = intent.ability ? CHARACTER_ABILITIES[intent.ability as keyof typeof CHARACTER_ABILITIES] : 'Check';
+      
       if (diceResult.criticalHit) {
         enhancedAction += language === 'ru'
-          ? `\n[🎲 КРИТ УСПЕХ! Бросок: 20 + ${diceResult.modifier} = ${diceResult.total}]`
-          : `\n[🎲 CRITICAL SUCCESS! Roll: 20 + ${diceResult.modifier} = ${diceResult.total}]`;
+          ? `\n[✨ КРИТ УСПЕХ! Бросок: 20 (${abilityName} +${diceResult.abilityMod}) = ${diceResult.total}]`
+          : `\n[✨ CRITICAL SUCCESS! Roll: 20 (${abilityName} +${diceResult.abilityMod}) = ${diceResult.total}]`;
       } else if (diceResult.criticalMiss) {
         enhancedAction += language === 'ru'
-          ? `\n[💥 КРИТ ПРОВАЛ! Бросок: 1 + ${diceResult.modifier} = ${diceResult.total}]`
-          : `\n[💥 CRITICAL FAILURE! Roll: 1 + ${diceResult.modifier} = ${diceResult.total}]`;
+          ? `\n[💥 КРИТ ПРОВАЛ! Бросок: 1 (${abilityName} +${diceResult.abilityMod}) = ${diceResult.total}]`
+          : `\n[💥 CRITICAL FAIL! Roll: 1 (${abilityName} +${diceResult.abilityMod}) = ${diceResult.total}]`;
       } else {
-        const status = diceResult.success ? '✅ УСПЕХ' : '❌ ПРОВАЛ';
-        const statusEn = diceResult.success ? '✅ SUCCESS' : '❌ FAILURE';
+        const status = diceResult.success ? 'SUCCESS' : 'FAILURE';
         enhancedAction += language === 'ru'
-          ? `\n[${status} Бросок: ${diceResult.roll} + ${diceResult.modifier} = ${diceResult.total}]`
-          : `\n[${statusEn} Roll: ${diceResult.roll} + ${diceResult.modifier} = ${diceResult.total}]`;
-      }
-    } else {
-      if (language === 'ru') {
-        enhancedAction += `\n[Не требует броска кубика]`;
-      } else {
-        enhancedAction += `\n[No dice roll required]`;
+          ? `\n[Бросок: d20[${diceResult.roll}] ${abilityName} +${diceResult.abilityMod} = ${diceResult.total} (${status})]`
+          : `\n[Roll: d20[${diceResult.roll}] ${abilityName} +${diceResult.abilityMod} = ${diceResult.total} (${status})]`;
       }
     }
 
-    // Генерируем нарратив с улучшенным контекстом
+    // Add personality influence to context
+    enhancedAction += `\n[Personality influence: ${personalityInfluence}]`;
+
     return await AIService.generateActionResponse(
       enhancedAction,
       character,
@@ -323,6 +427,31 @@ What type of action is this and does it require a dice roll?`;
       context,
       language
     );
+  }
+
+  /**
+   * STEP 5: Evolve relationships based on success and personality
+   */
+  private static evolveRelationships(
+    character: Character,
+    context: GameContext,
+    success: boolean,
+    personality: string
+  ): boolean {
+    // Initialize NPC relations if needed
+    if (!character.npcRelations) {
+      character.npcRelations = {};
+    }
+
+    // Simulate relationship changes
+    const pointsChange = success
+      ? (personality.includes('kind') ? 5 : 3)
+      : (personality.includes('deceptive') ? -5 : -2);
+
+    // This would integrate with actual NPC tracking in a full system
+    console.log(`📊 Relationship change: ${pointsChange > 0 ? '+' : ''}${pointsChange} points`);
+    
+    return true; // Relationship changed
   }
 }
 
