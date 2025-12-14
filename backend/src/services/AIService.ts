@@ -1,10 +1,15 @@
 // AI DM Service на OpenAI GPT-4 с быстрым fallback
 
+import dotenv from 'dotenv';
 import OpenAI from 'openai';
 import type { Character, World } from '../types/index.js';
 
+// Загружаем .env в этом модуле
+// (дополнительная зарядка если main.ts ее опустил)
+dotenv.config();
+
 let client: OpenAI | null = null;
-let openAIEnabled = true; // Флаг доступности OpenAI
+let openAIEnabled = false; // По умолчанию fallback
 
 /**
  * Инициализировать OpenAI клиент
@@ -12,19 +17,31 @@ let openAIEnabled = true; // Флаг доступности OpenAI
 function initializeClient(): void {
   if (client) return;
   
-  if (!process.env.OPENAI_API_KEY) {
-    console.warn('⚠️  OPENAI_API_KEY не установлена. AI DM будет недоступен.');
+  // Проверяем API ключ
+  const apiKey = process.env.OPENAI_API_KEY;
+  
+  if (!apiKey || apiKey.trim().length === 0) {
+    console.warn('⚠️  OPENAI_API_KEY не установлена. AI DM будет использовать fallback.');
     openAIEnabled = false;
     return;
   }
   
-  client = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-    timeout: 15000, // 15 секунд таймаут
-  });
-  
-  console.log('✅ OpenAI client инициализирован');
+  try {
+    client = new OpenAI({
+      apiKey: apiKey,
+      timeout: 15000, // 15 секунд таймаут
+    });
+    
+    openAIEnabled = true;
+    console.log('✅ OpenAI client инициализирован, API ключ:', apiKey.substring(0, 20) + '...');
+  } catch (e: any) {
+    console.error('❌ Ошибка инициализации OpenAI:', e.message);
+    openAIEnabled = false;
+  }
 }
+
+// Пытаемся инициализировать при загружении модуля
+initializeClient();
 
 export class AIService {
   /**
@@ -34,16 +51,13 @@ export class AIService {
     character: Character,
     world: World
   ): Promise<string> {
-    // Fallback нарратив на случай недоступности AI
+    // Fallback нарратив
     const fallbackNarrative = `Вы просыпаетесь в ${world.name}. ${character.name}, ${character.race} ${character.class}, чувствует тяжесть предстоящих испытаний. Тёмный лес окружает вас, а впереди слышны странные звуки...`;
     
-    if (!openAIEnabled) {
+    if (!openAIEnabled || !client) {
       console.log('⚠️  OpenAI недоступен, используется fallback нарратив');
       return fallbackNarrative;
     }
-    
-    if (!client) initializeClient();
-    if (!client || !openAIEnabled) return fallbackNarrative;
 
     const prompt = `Ты - AI Мастер Подземелья D&D 5e.
     
@@ -61,7 +75,7 @@ export class AIService {
         messages: [
           {
             role: 'system',
-            content: 'Ты - D&D 5e Мастер Подземелья. Генерируешь вызывающие сцены для игроков. Ответ короткий, активный, интригующий.'
+            content: 'Ты - D&D 5e Мастер Подземелья. Генерируешь вызывающие сцены. Коротко, активно, интригующе.'
           },
           {
             role: 'user',
@@ -72,13 +86,14 @@ export class AIService {
         max_tokens: 200,
       });
 
-      return response.choices[0].message.content || fallbackNarrative;
+      const result = response.choices[0].message.content || fallbackNarrative;
+      console.log('✅ OpenAI нарратив генерирован');
+      return result;
     } catch (error: any) {
-      console.error('❌ OpenAI API ошибка при генерации нарратива:', error.message);
+      console.error('❌ OpenAI ошибка:', error.message);
       
-      // Если ошибка сети - отключаем OpenAI
+      // Отключаем OpenAI на сетевых ошибках
       if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT' || error.message?.includes('Connection')) {
-        console.warn('⚠️  OpenAI недоступен, отключаю для этой сессии');
         openAIEnabled = false;
       }
       
@@ -95,22 +110,13 @@ export class AIService {
     character: Character,
     world: World
   ): Promise<string> {
-    const fallbackResponse = `Ваше действие "${action}" имеет неожиданный результат. Окружающий мир меняется, и перед вами открывается новый путь. Что вы делаете дальше?`;
+    const fallbackResponse = `Ваше действие "${action}" имеет неожиданный результат. Окружающий мир меняется, и перед вами открывается новый путь.`;
     
-    if (!openAIEnabled) {
-      console.log('⚠️  OpenAI недоступен, используется fallback ответ');
+    if (!openAIEnabled || !client) {
       return fallbackResponse;
     }
-    
-    if (!client) initializeClient();
-    if (!client || !openAIEnabled) return fallbackResponse;
 
-    const prompt = `Игровой контекст:
-${previousNarrative}
-
-Герой ${character.name} совершает действие: ${action}
-
-На основании D&D 5e механики, напиши вызывающий результат действия. Не более 2 предложений.`;
+    const prompt = `Игровой контекст: ${previousNarrative}\nОтветь на действие "${action}":`;
 
     try {
       const response = await client.chat.completions.create({
@@ -118,7 +124,7 @@ ${previousNarrative}
         messages: [
           {
             role: 'system',
-            content: 'Ты - D&D 5e Мастер Подземелья. Генерируешь динамичные ответы на действия. Короткие тексты, увлекательные сцены.'
+            content: 'Ты - D&D 5e Мастер. Коротко, динамично.'
           },
           {
             role: 'user',
@@ -131,41 +137,27 @@ ${previousNarrative}
 
       return response.choices[0].message.content || fallbackResponse;
     } catch (error: any) {
-      console.error('❌ OpenAI API ошибка при обработке действия:', error.message);
-      
       if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT' || error.message?.includes('Connection')) {
         openAIEnabled = false;
       }
-      
       return fallbackResponse;
     }
   }
 
   /**
-   * Генерируем варианты действий для игрока
+   * Генерируем варианты действий
    */
   static async generateNextActions(
     narrative: string,
     previousActions: string[] = []
   ): Promise<string[]> {
-    const fallbackActions = ['Атаковать', 'Осмотреть окрестности', 'Поговорить', 'Отступить'];
+    const fallbackActions = ['Атаковать', 'Осмотреть', 'Поговорить', 'Отступить'];
     
-    if (!openAIEnabled) {
-      console.log('⚠️  OpenAI недоступен, используются fallback действия');
+    if (!openAIEnabled || !client) {
       return fallbackActions;
     }
-    
-    if (!client) initializeClient();
-    if (!client || !openAIEnabled) return fallbackActions;
 
-    const prompt = `На основании этого нарратива:
-${narrative}
-
-Предыдущие действия: ${previousActions.join(', ')}
-
-Генерируй 3-4 новых опции действия для D&D игрока.
-Ответ ТОЛЬКО JSON array с строками, без каких-либо других символов.
-Пример: ["Атаковать", "Поговорить", "Осмотреть"]`;
+    const prompt = `Какие действия можно сделать? JSON array ["действие", ...]`;
 
     try {
       const response = await client.chat.completions.create({
@@ -173,7 +165,7 @@ ${narrative}
         messages: [
           {
             role: 'system',
-            content: 'Ты - D&D 5e Мастер Подземелья. Отвечай ТОЛЬКО JSON массивом, ничего больше. Без markdown, без кода.'
+            content: 'Ответь ONLY JSON array, ничего больше.'
           },
           {
             role: 'user',
@@ -189,12 +181,9 @@ ${narrative}
       const parsed = JSON.parse(cleanContent);
       return Array.isArray(parsed) ? parsed : fallbackActions;
     } catch (error: any) {
-      console.error('❌ AI ошибка генерации действий:', error.message);
-      
       if (error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT' || error.message?.includes('Connection')) {
         openAIEnabled = false;
       }
-      
       return fallbackActions;
     }
   }
