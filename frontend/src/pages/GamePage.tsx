@@ -214,7 +214,7 @@ const GamePage: React.FC = () => {
           </div>
         </div>
         <div className="game-header__nav">
-          <button className="btn btn--outline btn--sm">Дом</button>
+          <button className="btn btn--outline btn--sm" onClick={() => navigate('/')}>Дом</button>
           <button className="btn btn--outline btn--sm">Играть</button>
           <button className="btn btn--outline btn--sm">Контент</button>
         </div>
@@ -226,7 +226,7 @@ const GamePage: React.FC = () => {
         <aside className="game-sidebar game-sidebar--left">
           <div className="sidebar-card">
             <h3 className="sidebar-card__title">Мир: {world.name}</h3>
-            <p className="sidebar-card__text">{world.description.substring(0, 200)}...</p>
+            <p className="sidebar-card__text">{world.description?.substring(0, 200)}...</p>
           </div>
         </aside>
 
