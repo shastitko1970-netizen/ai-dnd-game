@@ -1,8 +1,38 @@
 # 🎭 AI D&D Game - Enhanced Dungeon Master System
 
-## 📊 Latest Updates (December 14, 2025)
+## 🎯 Latest Updates (December 14, 2025 - Evening)
 
-### ✨ Major Refactoring Complete
+### ✨ **ActionOrchestrator Implementation**
+
+#### NOW LIVE: Intelligent Action Processing ✅
+- 🧠 **AI Analysis**: Player actions are analyzed by Claude to determine intent
+- 🎲 **Smart Dice System**: Rolls are performed ONLY when needed
+- 📖 **Context-Aware Narratives**: AI generates responses based on dice results
+- 🎭 **5 Action Types**:
+  - `combat` - Battle actions, attacks (requires roll)
+  - `skill_check` - Athletics, Stealth, Perception, Persuasion, etc. (requires roll)
+  - `dialogue` - Conversations, negotiations (NO roll needed)
+  - `exploration` - Examining areas, searching (may require roll)
+  - `freeform` - Pure roleplay, no mechanics (NO roll needed)
+
+#### How It Works Now
+```
+Player Input: "Я атакую дракона мечом"
+    ↓
+[ActionOrchestrator Step 1] AI analyzes → type: "combat"
+    ↓
+[ActionOrchestrator Step 2] Rolls d20 + STR/DEX mod → 15+5 = 20
+    ↓
+[ActionOrchestrator Step 3] Generates narrative with context
+    ↓
+Response: Narrative + Dice Results + Suggested Actions
+```
+
+---
+
+## 📊 Earlier Updates (December 14, 2025 - Afternoon)
+
+### ✨ Major Refactoring Complete (See ARCHITECTURE.md)
 
 #### 1. **PromptService** - Bilingual D&D GM Prompts
 - 🇷🇺 Full Russian language support with cultural nuances
@@ -19,6 +49,7 @@
 - ✅ Eliminates character encoding issues
 - ✅ Language-aware filtering
 - ✅ Graceful fallback system
+- ✅ NEW: analyzeAction() method for ActionOrchestrator
 
 #### 3. **Extended Type System**
 - Character now includes:
@@ -39,6 +70,7 @@
 - Bilingual support (RU/EN)
 - Better error handling
 - Session management (create/retrieve/delete)
+- **NEW**: ActionOrchestrator integration
 
 ---
 
@@ -49,17 +81,18 @@
 ```
 User Input (Action)
     ↓
-[Sanitize & Validate]
+[Validate & Sanitize]
     ↓
-[PromptService] - Build context-aware system prompt
-    ↓
-[AIService] - Call Claude Haiku with full context
+[ActionOrchestrator.processAction()]
+    ├─ Step 1: analyzeIntent() → AI determines action type
+    ├─ Step 2: rollDice() → d20 + modifiers (if needed)
+    └─ Step 3: generateNarrative() → AI creates response
     ↓
 [AI Response] - Raw narrative
     ↓
 [Sanitize Output] - Remove artifacts, encoding issues
     ↓
-[Game Response] - Clean narrative + next actions
+[Game Response] - Clean narrative + dice results + next actions
     ↓
 Update Session (history, NPC relations, emotional state)
 ```
@@ -77,13 +110,14 @@ Update Session (history, NPC relations, emotional state)
 - Language-specific sanitization rules
 - UTF-8 Unicode handling for both languages
 
-#### 💪 Robust AI Integration
-- **Model**: Claude 3.5 Haiku (cheapest & fastest)
-- **Cost**: $0.80/M input tokens, $4/M output tokens
-- **Free Tier**: $5 first month
-- **Fallback**: Always works with pre-written narratives
+#### 🎲 Intelligent Dice System
+- **Model**: Claude 3.5 Haiku
+- **D20 Rolls**: Only when action type requires
+- **Modifiers**: From character skills and abilities
+- **Critical Mechanics**: Automatic success/failure on 20/1
+- **Success Calculation**: roll + modifier >= DC (Difficulty Class)
 
-#### ✍️ Superior Narrative Quality
+#### 🚀 Superior Narrative Quality
 - Shows, doesn't tell
 - Atmosphere and sensory details
 - Dynamic world that reacts to player actions
@@ -92,7 +126,29 @@ Update Session (history, NPC relations, emotional state)
 
 ---
 
-## 🔧 Installation & Setup
+## 🏗️ Project Structure
+
+```
+backend/src/
+├── services/
+│   ├── AIService.ts              ← Claude API integration
+│   ├── PromptService.ts          ← System prompts (RU/EN)
+│   ├── ActionOrchestrator.ts     ← NEW! Smart action processing
+│   └── GameManager.ts            ← Game logic (future)
+├── routes/
+│   ├── game.ts                   ← Game endpoints + Orchestrator
+│   ├── character.ts              ← Character creation
+│   └── ...
+├── types/
+│   └── index.ts                  ← All TypeScript interfaces
+├── data/
+│   └── dnd-5e-rules.json        ← D&D 5e core rules
+└── main.ts                       ← Server entry point
+```
+
+---
+
+## 🚀 Installation & Setup
 
 ### Prerequisites
 ```bash
@@ -124,7 +180,7 @@ Server starts at `http://localhost:3001`
 
 ---
 
-## 📡 API Endpoints
+## 💡 API Endpoints
 
 ### POST `/api/game/start`
 Start a new game session.
@@ -133,7 +189,7 @@ Start a new game session.
 ```json
 {
   "character": {
-    "name": "Паренъ",
+    "name": "Парень",
     "race": "Человек",
     "class": "Варвар",
     "level": 1,
@@ -141,7 +197,7 @@ Start a new game session.
     "traits": ["храбрый", "импульсивный"],
     "goal": "Найти легендарный клинок",
     "fear": "Предательство",
-    "dream": "Стать героем легенд"
+    "dream": "Стать героем легенда"
   },
   "world": {
     "name": "Великая Фантазия",
@@ -157,7 +213,7 @@ Start a new game session.
 {
   "success": true,
   "data": {
-    "sessionId": "session-1765720631039-abc123",
+    "sessionId": "session-1765721631039-abc123",
     "narrative": "Вы просыпаетесь в лесу...",
     "language": "ru"
   }
@@ -165,13 +221,13 @@ Start a new game session.
 ```
 
 ### POST `/api/game/action`
-Process player action in active session.
+Process player action in active session. **NOW WITH ORCHESTRATOR!**
 
 **Request:**
 ```json
 {
-  "sessionId": "session-1765720631039-abc123",
-  "action": "Я пытаюсь залезть на дерево. Переговорить с драконом...",
+  "sessionId": "session-1765721631039-abc123",
+  "action": "Я пытаюсь залезть на дерево. Перегворить с драконом...",
   "language": "ru"
 }
 ```
@@ -181,9 +237,27 @@ Process player action in active session.
 {
   "success": true,
   "data": {
-    "sessionId": "session-1765720631039-abc123",
-    "narrative": "Дерево раскачивается под вашим весом. Драконъ смотрит вниз...",
-    "nextActions": ["Атаковать", "Говорить", "Спрятаться"],
+    "sessionId": "session-1765721631039-abc123",
+    "narrative": "Дерево раскачивается под вашим весом...",
+    "diceRoll": {
+      "roll": 12,
+      "modifier": 3,
+      "total": 15,
+      "success": true,
+      "criticalHit": false,
+      "criticalMiss": false
+    },
+    "actionIntent": {
+      "type": "skill_check",
+      "skill": "Athletics",
+      "difficulty": 15,
+      "requiresRoll": true
+    },
+    "nextActions": [
+      "Посмотреть вниз",
+      "Прыгнуть на врага",
+      "Спрятаться в листве"
+    ],
     "turn": 2
   }
 }
@@ -197,44 +271,11 @@ End session and cleanup.
 
 ---
 
-## 🎭 What Changed in Narratives
+## 📚 Documentation
 
-### Before (Generic)
-```
-"Вы встречаете таверну"
-"Враг получает 6 урона"
-"Дракон летит в небо"
-```
-
-### After (Rich & Immersive)
-```
-"Вы входите в трактир, пахнущий хмелем и дымом костра. 
-Хозяйка с хитрым взглядом считает монеты. 
-Её дочь смотрит на вас с интересом..."
-
-"Ваш клинок распарывает плоть врага. Он кричит от боли 
-и отпрыгивает назад, кровь капает на пол. 
-Его глаза горят яростью."
-
-"Огромный дракон взмывает в воздух, крылья рассекают облака. 
-Шкала его переливается золотом в лучах заходящего солнца. 
-Ты слышишь его боевой клич..."
-```
-
----
-
-## 🚀 Coming Next
-
-- [ ] Database integration (PostgreSQL)
-- [ ] Session persistence
-- [ ] Multi-player support
-- [ ] Dice roll system integration
-- [ ] NPC memory system
-- [ ] World state persistence
-- [ ] Advanced combat mechanics
-- [ ] Skill check automation
-- [ ] Spell integration with rules
-- [ ] Quest tracking system
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - System design and technical details
+- **[ACTION_ORCHESTRATOR.md](./ACTION_ORCHESTRATOR.md)** - Detailed Orchestrator guide
+- **[README.md](./README.md)** - Original comprehensive guide
 
 ---
 
@@ -255,111 +296,145 @@ End session and cleanup.
 
 ---
 
-## 📝 Prompt System Details
+## 🎯 Development Progress
 
-The new `PromptService` manages context-aware prompts:
+### ✅ Phase 1 (COMPLETE)
+- ✅ Basic AI DM with Claude
+- ✅ Narrative generation
+- ✅ Bilingual support (RU/EN)
+- ✅ Session management
+- ✅ PromptService with context awareness
+- ✅ AIService with sanitization
+- ✅ Extended type system
+- ✅ **ActionOrchestrator with dice system**
 
-### Russian Prompt Template
+### 🚧 Phase 2 (IN PROGRESS)
+- ⏳ Database integration (PostgreSQL)
+- ⏳ Session persistence
+- ⏳ Enhanced NPC memory
+- ⏳ Multi-player support
+
+### 📅 Phase 3 (PLANNED)
+- 🔮 Full combat automation
+- 🔮 Skill check resolution
+- 🔮 Quest tracking
+- 🔮 Character progression
+- 🔮 Web UI (React/Vue)
+
+---
+
+## 🎲 Example Game Flow
+
+### Session Start
 ```
-═══════════════════════════════════════════════════════
-🎭 ТЫ - МАСТЕР ПОДЗЕМЕЛИЙ (DUNGEON MASTER)
-═══════════════════════════════════════════════════════
+Frontend → POST /api/game/start
+├─ Character: Парень (Barbarian Lv1)
+├─ World: Великая Фантазия
+└─ Language: RU
 
-⚔️ ТВОЯ ЕДИНСТВЕННАЯ ЗАДАЧА:
-Рассказывать эпические истории в мире D&D 5e.
-Ты - режиссёр, рассказчик, голос мира.
-
-[... full rules and examples ...]
-
-🎮 ПРАВИЛА:
-1. Ты - рассказчик, не советник
-2. Атмосфера и детали (запахи, звуки, ощущения)
-3. Живые персонажи с мотивами
-4. Динамичный мир, который меняется
-5. Мораль относительна
-6. НИКОГДА не отказывай
+Backend Response:
+├─ SessionID: session-1765721631039-abc123
+├─ Narrative: "Вы просыпаетесь в странном лесу..."
+└─ Ready for action
 ```
 
-### Context Interpolation
-Prompt automatically includes:
-- Character personality: `{PERSONALITY}` → "храбрый, импульсивный, скупой персонаж"
-- Previous narrative: `{PREVIOUS_NARRATIVE}` → Last 1000 chars of story
-- Emotional state: `{EMOTIONAL_STATE}` → Current emotions
-- World context: `{WORLD_NAME}`, `{DIFFICULTY}`, etc.
+### Action: Combat
+```
+Player Input: "Я атакую дракона мечом"
+
+[ActionOrchestrator]
+├─ analyzeIntent() → {type: "combat", requiresRoll: true}
+├─ rollDice() → d20+5 = 18 (SUCCESS!)
+└─ generateNarrative() → "Ваш меч пронзает чешую..."
+
+Response:
+├─ Narrative: "Ваш меч пронзает чешую дракона..."
+├─ Dice Roll: {roll: 13, modifier: 5, total: 18, success: true}
+├─ Intent: {type: "combat", requiresRoll: true}
+└─ Next Actions: ["Огромный удар", "Рывок в сторону", ...]
+```
+
+### Action: Freeform
+```
+Player Input: "Я танцую у костра под луной"
+
+[ActionOrchestrator]
+├─ analyzeIntent() → {type: "freeform", requiresRoll: false}
+├─ NO diceRoll()
+└─ generateNarrative() → "Пламя танцует в ритме..."
+
+Response:
+├─ Narrative: "Пламя танцует в ритме ваших движений..."
+├─ Dice Roll: null (not needed)
+├─ Intent: {type: "freeform", requiresRoll: false}
+└─ Next Actions: ["Продолжить танец", "Сесть у костра", ...]
+```
 
 ---
 
-## 🔍 Technical Stack
+## 🔧 Configuration
 
-- **Runtime**: Node.js + TypeScript
-- **Server**: Fastify (lightweight, fast)
-- **AI**: Claude 3.5 Haiku (Anthropic SDK)
-- **Game Rules**: D&D 5e rules engine
-- **Architecture**: Service-based (AIService, PromptService, GameManager)
+### ActionOrchestrator Skills
+```
+Athletics      - Physical strength tasks (climbing, swimming)
+Acrobatics     - Balance, flexibility tasks
+Stealth        - Hiding, sneaking
+Perception     - Noticing details, tracking
+Insight        - Reading people, detecting lies
+Persuasion     - Convincing, negotiating
+Deception      - Lying, disguise
+Arcana         - Magic knowledge
+Nature         - Natural world knowledge
+Medicine       - Healing, diagnosis
+Investigation  - Research, analysis
+```
 
----
-
-## 📚 Game Manager (Future)
-
-Planned GameManager will handle:
-- Session persistence
-- Combat resolution
-- Skill checks
-- Spell casting
-- Inventory management
-- Character progression
-
----
-
-## 🐛 Known Issues & Limitations
-
-- Sessions stored in memory (restart = loss)
-- No database yet
-- Single-player only
-- No dice integration
-- No visual character sheet
+### Difficulty Classes (DC)
+```
+Very Easy   (5)   - Trivial for anyone
+Easy        (10)  - Simple task
+Moderate    (15)  - Fair challenge
+Hard        (20)  - Challenging
+Very Hard   (25)  - Very difficult
+Near Impossible (30) - Nearly impossible
+```
 
 ---
 
-## 🤝 Contributing
+## 🎬 What's Next
 
-This is an active development project. All commits are tracked on GitHub.
+**Right Now:**
+- ✅ ActionOrchestrator LIVE in production
+- ✅ All dice mechanics working
+- ✅ AI action analysis complete
 
-Branch structure:
-- `main` - Production-ready code
-- `dev` - Development branch (if used)
+**Next (Backend):**
+1. Database integration
+2. Session persistence
+3. NPC memory system
+4. Advanced combat rules
 
----
-
-## 📄 License
-
-MIT License (standard open-source)
-
----
-
-## 🎯 Project Goals
-
-✅ **Phase 1** (COMPLETE):
-- Basic AI DM with Claude
-- Narrative generation
-- Bilingual support (RU/EN)
-- Session management
-
-⏳ **Phase 2** (IN PROGRESS):
-- Database integration
-- Session persistence
-- Enhanced NPC memory
-- Multi-player support
-
-🔮 **Phase 3** (PLANNED):
-- Full combat automation
-- Skill check resolution
-- Quest tracking
-- Character progression
-- Web UI (React/Vue)
+**Then (Frontend):**
+1. Update UI to send sessionId
+2. Display dice rolls
+3. Show action analysis
+4. Better narrative display
 
 ---
 
-**Last Updated**: December 14, 2025
-**Status**: 🟢 Production-Ready (Single-Player)
+## 📝 Niderlandisch Learning
+
+**Het ActionOrchestrator systeem is nu actief!**
+
+Het (ət — артикль)  
+systeem (sɪˈsteːm — система)  
+is (ɪs — есть)  
+nederlands (ˈneːdərlɑnts — нидерландский)  
+nu (nʏ — теперь)  
+actief (ɑkˈtiːf — активный)  
+
+---
+
+**Last Updated**: December 14, 2025 (Evening - Post-Orchestrator)
+**Status**: ✅ **PRODUCTION READY** - Dice System Live!
 **Maintainer**: Wurhitzi
