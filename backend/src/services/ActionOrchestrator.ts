@@ -44,7 +44,77 @@ export interface ActionResult {
   suggestedActions: string[];
 }
 
+// Таблица переводов для локализации
+const TRANSLATIONS: { [key: string]: { [key: string]: string } } = {
+  ru: {
+    'Damphir': 'Дампир',
+    'Necromancer': 'Некромант',
+    'Paladin': 'Паладин',
+    'Rogue': 'Разбойник',
+    'Fighter': 'Воин',
+    'Wizard': 'Волшебник',
+    'Barbarian': 'Варвар',
+    'Bard': 'Бард',
+    'Cleric': 'Священник',
+    'Druid': 'Друид',
+    'Monk': 'Монах',
+    'Ranger': 'Рейнджер',
+    'Sorcerer': 'Чародей',
+    'Warlock': 'Колдун',
+    'Elf': 'Эльф',
+    'Human': 'Человек',
+    'Dwarf': 'Гном',
+    'Halfling': 'Полурослик',
+    'Dragonborn': 'Драконорожденный',
+    'Half-Elf': 'Полуэльф',
+    'Half-Orc': 'Полуорк',
+    'Tiefling': 'Тифлинг',
+  },
+  en: {},
+};
+
 export class ActionOrchestrator {
+  /**
+   * Локализация текста - заменяет английские слова на нужный язык
+   */
+  private static sanitizeForLanguage(text: string, language: 'ru' | 'en'): string {
+    if (language === 'en') return text;
+
+    let result = text;
+    const langMap = TRANSLATIONS[language] || {};
+
+    Object.entries(langMap).forEach(([en, translated]) => {
+      const regex = new RegExp(`\\b${en}\\b`, 'gi');
+      result = result.replace(regex, translated);
+    });
+
+    return result;
+  }
+
+  /**
+   * Форматирует текст действия - добавляет пробелы, убирает camelCase
+   */
+  private static formatActionText(action: string): string {
+    // 1. Убираем двойные пробелы
+    let formatted = action.replace(/\s+/g, ' ').trim();
+
+    // 2. Проверяем что есть пробелы между словами
+    if (formatted.length > 0 && !formatted.includes(' ')) {
+      // Если одно слово - ОК
+      return formatted;
+    }
+
+    // 3. Если слова слиплись (camelCase), разделяем
+    // "войтиВТаверну" -> "войти в таверну"
+    if (!/\s/.test(formatted) && /[a-z][A-Z]/.test(formatted)) {
+      formatted = formatted
+        .replace(/([a-z])([A-Z])/g, '$1 $2')
+        .toLowerCase();
+    }
+
+    return formatted;
+  }
+
   /**
    * ШАГИ 1-3 ВМЕСТЕ: Полная обработка действия
    */
@@ -89,12 +159,19 @@ export class ActionOrchestrator {
     );
 
     // Генерируем следующие действия
-    const suggestedActions = await AIService.generateNextActions(
+    let suggestedActions = await AIService.generateNextActions(
       character,
       world,
       context,
       language
     );
+
+    // Форматируем и локализуем все действия
+    suggestedActions = suggestedActions.map(action => {
+      let formatted = this.formatActionText(action);
+      formatted = this.sanitizeForLanguage(formatted, language);
+      return formatted;
+    });
 
     return {
       intent,
